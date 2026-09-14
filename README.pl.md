@@ -47,7 +47,7 @@ end
 ```
 
 albo zmienną `PL_ZIP_CODES_DIR`. Odczyt najpierw zagląda tam, a w razie braku
-pliku sięga po zbiór z gema — ustawienie katalogu, którego jeszcze nie
+pliku sięga po zbiór z gema - ustawienie katalogu, którego jeszcze nie
 odświeżyłeś, niczego nie psuje.
 
 ## Użycie
@@ -71,7 +71,7 @@ czemu nadal można znaleźć najkrótszą miejscowość „Oś”. Jednoznakowe 
 zwracają pusty wynik bez skanowania pliku.
 
 Jeden rekord to jeden kod pocztowy w jednej miejscowości. Miejscowość z kilkoma
-kodami ma kilka rekordów, tak samo kod dzielony przez kilka wsi — `86-010` to
+kodami ma kilka rekordów, tak samo kod dzielony przez kilka wsi - `86-010` to
 42 miejscowości wokół Koronowa.
 
 Kiedy potrzebujesz **miejscowości, a nie kodów**, jest gotowa agregacja:
@@ -117,7 +117,7 @@ end
 
 ## Format pliku
 
-`pl-zip-codes.tsv` — TSV z nagłówkiem, obok `pl-zip-codes.manifest.json` z
+`pl-zip-codes.tsv` - TSV z nagłówkiem, obok `pl-zip-codes.manifest.json` z
 ETagiem źródła, datą budowy i liczbą wierszy. Celowo nieskompresowany: plik jest
 commitowany, więc odświeżenie ma dawać diff do przejrzenia, a nie nowy nieczytelny
 blob. Kolumny:
@@ -131,7 +131,7 @@ blob. Kolumny:
 | `county` / `county_teryt` | `Powiat bydgoski` / `0403` | nazwa ze źródła, patrz niżej |
 | `commune` / `commune_teryt` | `Gmina Koronowo` / `040304` | nazwa ze źródła |
 | `latitude` / `longitude` | `53.3123` / `17.9539` | WGS84 |
-| `accuracy` | `6` | pole źródła — patrz niżej |
+| `accuracy` | `6` | pole źródła - patrz niżej |
 
 Plik jest zapisywany przez plik tymczasowy i `rename`, więc przerwane pobieranie
 nigdy nie zostawia połowicznego zbioru w miejscu kompletnego.
@@ -154,12 +154,12 @@ nimi tutaj nie zmierzyłem.
 wszystkie 16 województw po angielsku i niespójnie (`Lower Silesia`,
 `Warmia-Masuria`, `Łódź Voivodeship`), więc gem ma własną, zweryfikowaną tabelę
 i mapuje ją na kody TERYT. Na poziomie powiatu i gminy nazwy zostają takie, jakie
-przyszły — 36 z 374 powiatów ma artefakty w rodzaju `Leszno County`. **Pewnym
+przyszły - 36 z 374 powiatów ma artefakty w rodzaju `Leszno County`. **Pewnym
 identyfikatorem są kolumny `*_teryt`**, nie nazwy.
 
 Naturalnym następnym krokiem jest dociągnięcie urzędowych polskich nazw z GUGiK
 SLN (`mapy.geoportal.gov.pl/wss/service/SLN/guest/sln`), który zwraca je razem z
-kodami TERYT — cały słownik to ok. 397 zapytań JSON-em, a join idzie po kodzie,
+kodami TERYT - cały słownik to ok. 397 zapytań JSON-em, a join idzie po kodzie,
 który już mamy w każdym wierszu.
 
 Gem nie zawiera ulic ani numerów budynków i nie jest geokoderem adresów. Do

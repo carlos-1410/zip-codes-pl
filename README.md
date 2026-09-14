@@ -18,7 +18,7 @@ without building an index or retaining the whole dataset in memory.
 
 GeoNames is an excellent source of Polish postal codes and coordinates, and a
 poor source of Polish *names*. It labels all sixteen voivodeships in English and
-inconsistently — `Lower Silesia`, `Warmia-Masuria`, `Łódź Voivodeship` — which is
+inconsistently - `Lower Silesia`, `Warmia-Masuria`, `Łódź Voivodeship` - which is
 not something you can put in front of a Polish user.
 
 This gem carries its own verified table of the sixteen voivodeships, mapped onto
@@ -84,7 +84,7 @@ name, so the shortest place, `Oś`, remains searchable. One-character queries
 return an empty result without scanning the file.
 
 One record is one postal code in one place. A town with several codes has
-several records, and so does a code shared by several villages — `86-010` covers
+several records, and so does a code shared by several villages - `86-010` covers
 42 places around Koronowo.
 
 When you want **places rather than codes**, there is a ready aggregation:
@@ -130,7 +130,7 @@ end
 
 ## File format
 
-`pl-zip-codes.tsv` — tab separated with a header row, next to
+`pl-zip-codes.tsv` - tab separated with a header row, next to
 `pl-zip-codes.manifest.json` holding the source ETag, build time and row count.
 It is left uncompressed on purpose: the file is committed, and a refresh should
 produce a reviewable diff rather than a fresh opaque blob.
@@ -144,7 +144,7 @@ produce a reviewable diff rather than a fresh opaque blob.
 | `county` / `county_teryt` | `Powiat bydgoski` / `0403` | name as received, see below |
 | `commune` / `commune_teryt` | `Gmina Koronowo` / `040304` | name as received |
 | `latitude` / `longitude` | `53.3123` / `17.9539` | WGS84 |
-| `accuracy` | `6` | as reported by the source — see below |
+| `accuracy` | `6` | as reported by the source - see below |
 
 The file is written to a temporary path and renamed, so an interrupted download
 never replaces a complete dataset with half of one.
@@ -171,7 +171,7 @@ dependable identifiers**, not the names.
 The natural next step is pulling official Polish names from the Polish national
 mapping agency's SLN dictionary
 (`mapy.geoportal.gov.pl/wss/service/SLN/guest/sln`), which returns them together
-with TERYT codes — the whole administrative dictionary is about 397 JSON
+with TERYT codes - the whole administrative dictionary is about 397 JSON
 requests, and the join key is already in every row.
 
 There are no streets or building numbers here, and this is not an address

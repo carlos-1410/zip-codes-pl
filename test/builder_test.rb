@@ -45,6 +45,26 @@ class BuilderTest < Minitest::Test
     end
   end
 
+  def test_failed_refresh_keeps_the_previous_dataset_and_manifest
+    in_output_dir do |config|
+      first = TestHelpers::StubSource.new(archive: @archive, etag: "\"v1\"")
+      PlZipCodes::Builder.new(config: config, source: first).call
+      previous_data = File.binread(config.data_path)
+      previous_manifest = File.binread(config.manifest_path)
+      broken_rows = [TestHelpers::SAMPLE_ROWS.first, "PL\t86-010"]
+      broken_archive = TestHelpers.geonames_archive(rows: broken_rows)
+      broken = TestHelpers::StubSource.new(archive: broken_archive, etag: "\"v2\"")
+
+      assert_raises(PlZipCodes::DownloadError) do
+        PlZipCodes::Builder.new(config: config, source: broken).call
+      end
+
+      assert_equal previous_data, File.binread(config.data_path)
+      assert_equal previous_manifest, File.binread(config.manifest_path)
+      assert_empty Dir.glob(File.join(config.output_dir, "*.tmp"))
+    end
+  end
+
   # A cached etag with no file behind it would answer "unchanged" and leave the
   # caller with nothing to read.
   def test_missing_data_file_forces_a_fresh_download

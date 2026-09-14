@@ -73,9 +73,17 @@ class GeonamesTest < Minitest::Test
     assert_raises(PlZipCodes::DownloadError) { @source.each_record(archive).to_a }
   end
 
-  def test_skips_short_lines_instead_of_raising
-    rows = [TestHelpers::SAMPLE_ROWS.first, "", "PL\t86-010"]
+  def test_skips_blank_lines
+    rows = [TestHelpers::SAMPLE_ROWS.first, ""]
 
     assert_equal 1, @source.each_record(TestHelpers.geonames_archive(rows: rows)).to_a.size
+  end
+
+  def test_refuses_a_short_row
+    rows = [TestHelpers::SAMPLE_ROWS.first, "PL\t86-010"]
+
+    assert_raises(PlZipCodes::DownloadError) do
+      @source.each_record(TestHelpers.geonames_archive(rows: rows)).to_a
+    end
   end
 end

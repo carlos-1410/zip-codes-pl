@@ -87,8 +87,13 @@ module PlZipCodes
       end
 
       def parse_line(line)
+        return if line.strip.empty?
+
         fields = line.chomp.split("\t", -1)
-        return if fields.length < EXPECTED_FIELDS
+        unless fields.length == EXPECTED_FIELDS
+          raise DownloadError,
+                "nieprawidłowy rekord GeoNames: oczekiwano #{EXPECTED_FIELDS} pól, otrzymano #{fields.length}"
+        end
 
         voivodeship = Voivodeship.find_by_geonames_code(fields[4])
         # An unknown admin1 code means the canonical table above is stale, and a

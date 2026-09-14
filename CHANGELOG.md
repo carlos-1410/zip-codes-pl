@@ -6,7 +6,7 @@
 
 - Places are grouped by commune as well as name. Grouping by name and
   voivodeship alone merged distinct villages sharing a name into one averaged
-  point — 2,936 places sat more than 25 km from a row they claimed to cover, and
+  point - 2,936 places sat more than 25 km from a row they claimed to cover, and
   6,814 real places were hidden entirely. No place is now further than 25 km from
   its own rows, and the median is 0.
 
