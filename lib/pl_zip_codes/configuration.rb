@@ -7,7 +7,7 @@ module PlZipCodes
     MANIFEST_FILENAME = "pl-zip-codes.manifest.json"
     BUNDLED_DIR = File.expand_path("../../data", __dir__)
 
-    attr_accessor :output_dir, :source_url, :user_agent, :open_timeout, :read_timeout
+    attr_accessor :output_dir, :source_url, :user_agent, :open_timeout, :read_timeout, :poczta_request_interval
 
     def initialize
       @output_dir = ENV.fetch("PL_ZIP_CODES_DIR", DEFAULT_OUTPUT_DIR)
@@ -15,6 +15,7 @@ module PlZipCodes
       @user_agent = "pl-zip-codes/#{VERSION} (+https://github.com/carlos-1410/pl-zip-codes)"
       @open_timeout = 10
       @read_timeout = 60
+      @poczta_request_interval = Sources::PocztaPolska::DEFAULT_REQUEST_INTERVAL
     end
 
     # Where a refresh writes.

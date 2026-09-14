@@ -31,6 +31,13 @@ rake pl_zip_codes:update[db/pna]    # do wskazanego katalogu
 rake pl_zip_codes:info[db/pna]      # co jest zbudowane i z kiedy
 ```
 
+Kiedy zrzut GeoNames się zmienił, build dociąga z publicznej wyszukiwarki
+Poczty Polskiej nazwy powiatów i gmin po kodach TERYT.
+Zapytania idą sekwencyjnie, domyślnie nie częściej niż co 0,25 s; odpowiedź
+`429` wstrzymuje kolejne zapytanie zgodnie z `Retry-After`. Pełne wzbogacenie
+zajmuje obecnie około pięciu minut. Przy odpowiedzi `304 Not Modified` Poczta
+Polska nie jest odpytywana.
+
 W aplikacji Rails zadanie podpina się samo przez railtie. Poza Railsami dodaj do
 swojego `Rakefile`:
 
@@ -43,6 +50,7 @@ Katalog wyjściowy ustawia się też na stałe:
 ```ruby
 PlZipCodes.configure do |config|
   config.output_dir = Rails.root.join("db/pna").to_s
+  config.poczta_request_interval = 0.5 # opcjonalnie jeszcze wolniej
 end
 ```
 
@@ -80,8 +88,8 @@ Kiedy potrzebujesz **miejscowości, a nie kodów**, jest gotowa agregacja:
 PlZipCodes.cities.first
 # => #<data PlZipCodes::City
 #      name="Adamów", voivodeship="lubelskie", voivodeship_teryt="06",
-#      commune="Gmina Adamów", commune_teryt="060302",
-#      latitude=50.6..., longitude=22.5..., postal_codes=["21-412"]>
+#      commune="Adamów", commune_teryt="061103",
+#      latitude=51.7429, longitude=22.263, postal_codes=["21-412"]>
 ```
 
 Współrzędne miejscowości to średnia z jej wierszy, bo źródło daje punkt na kod
@@ -128,13 +136,14 @@ blob. Kolumny:
 | `city` | `Nowa Wieś Wielka` | |
 | `voivodeship` | `kujawsko-pomorskie` | nazwa z tego gema, nie ze źródła |
 | `voivodeship_teryt` | `04` | urzędowy kod TERYT |
-| `county` / `county_teryt` | `Powiat bydgoski` / `0403` | nazwa ze źródła, patrz niżej |
-| `commune` / `commune_teryt` | `Gmina Koronowo` / `040304` | nazwa ze źródła |
+| `county` / `county_teryt` | `powiat bydgoski` / `0403` | nazwa z Poczty Polskiej po kodzie TERYT |
+| `commune` / `commune_teryt` | `Koronowo` / `040304` | nazwa z Poczty Polskiej po kodzie TERYT |
 | `latitude` / `longitude` | `53.3123` / `17.9539` | WGS84 |
 | `accuracy` | `6` | pole źródła - patrz niżej |
 
-Plik jest zapisywany przez plik tymczasowy i `rename`, więc przerwane pobieranie
-nigdy nie zostawia połowicznego zbioru w miejscu kompletnego.
+Plik jest zapisywany przez plik tymczasowy i `rename`. Błąd pobierania GeoNames,
+odpowiedzi Poczty Polskiej, parsowania albo walidacji zostawia poprzedni TSV i
+manifest bez zmian.
 
 ## Czego ten gem nie udaje
 
@@ -150,17 +159,11 @@ miejscowości, które mają kod pocztowy w zrzucie GeoNames, w pisowni GeoNames.
 Urzędowy TERYT SIMC jest większy i to on rozstrzyga o nazwach; różnicy między
 nimi tutaj nie zmierzyłem.
 
-**Nazwy województw są poprawione, nazwy powiatów i gmin nie.** Źródło podaje
-wszystkie 16 województw po angielsku i niespójnie (`Lower Silesia`,
-`Warmia-Masuria`, `Łódź Voivodeship`), więc gem ma własną, zweryfikowaną tabelę
-i mapuje ją na kody TERYT. Na poziomie powiatu i gminy nazwy zostają takie, jakie
-przyszły - 36 z 374 powiatów ma artefakty w rodzaju `Leszno County`. **Pewnym
-identyfikatorem są kolumny `*_teryt`**, nie nazwy.
-
-Naturalnym następnym krokiem jest dociągnięcie urzędowych polskich nazw z GUGiK
-SLN (`mapy.geoportal.gov.pl/wss/service/SLN/guest/sln`), który zwraca je razem z
-kodami TERYT - cały słownik to ok. 397 zapytań JSON-em, a join idzie po kodzie,
-który już mamy w każdym wierszu.
+**Nazwy administracyjne są ujednolicone po kodach TERYT.** Gem ma własną tabelę
+16 województw, a podczas odświeżenia pobiera z Poczty Polskiej aktualne nazwy
+powiatów i gmin. Jedynym jawnym wyjątkiem jest historyczny kod `320304` dawnej
+gminy Ostrowice, zniesionej 1 stycznia 2019, który nadal występuje w GeoNames.
+**Pewnym identyfikatorem pozostają kolumny `*_teryt`**, nie nazwy.
 
 Gem nie zawiera ulic ani numerów budynków i nie jest geokoderem adresów. Do
 adresu z dokładnością do numeru służy darmowe UUG GUGiK
@@ -168,8 +171,9 @@ adresu z dokładnością do numeru służy darmowe UUG GUGiK
 
 ## Źródło i licencja
 
-Dane pochodzą z [GeoNames](https://www.geonames.org) na licencji
-**CC BY 4.0**. Jeśli publikujesz zbudowany zbiór albo aplikację, która go
-używa, musisz podać to źródło. Manifest niesie gotową formułkę atrybucji.
+Dane PNA i współrzędne pochodzą z [GeoNames](https://www.geonames.org) na
+licencji **CC BY 4.0**. Nazwy powiatów i gmin są pobierane z publicznej
+wyszukiwarki [Poczty Polskiej](https://www.poczta-polska.pl/znajdz-kod-pocztowy/).
+Manifest niesie gotową formułkę atrybucji.
 
 Sam kod jest na licencji MIT.

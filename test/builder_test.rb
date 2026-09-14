@@ -20,6 +20,26 @@ class BuilderTest < Minitest::Test
     end
   end
 
+  def test_replaces_source_county_and_commune_names_with_official_ones
+    in_output_dir do |config|
+      names = PlZipCodes::Sources::PocztaPolska::Names.new(
+        counties: { "3013" => "leszczyński" },
+        communes: { "301302" => "Lipno" }
+      )
+      names_source = Object.new
+      names_source.define_singleton_method(:fetch) { names }
+      rows = [TestHelpers::SAMPLE_ROWS[2]]
+      source = TestHelpers::StubSource.new(archive: TestHelpers.geonames_archive(rows: rows))
+
+      PlZipCodes::Builder.new(config: config, source: source, administrative_names_source: names_source).call
+      record = PlZipCodes::Reader.new(config.data_path).first
+
+      assert_equal "powiat leszczyński", record.county
+      assert_equal "Lipno", record.commune
+      assert_match(/Poczta Polska/, PlZipCodes::Manifest.read(config.manifest_path).attribution)
+    end
+  end
+
   def test_second_run_asks_the_server_with_the_stored_etag
     in_output_dir do |config|
       source = TestHelpers::StubSource.new(archive: @archive, etag: "\"v1\"")
@@ -45,6 +65,43 @@ class BuilderTest < Minitest::Test
     end
   end
 
+  def test_unchanged_source_does_not_fetch_administrative_names
+    in_output_dir do |config|
+      source = TestHelpers::StubSource.new(archive: @archive, etag: "\"v1\"", not_modified_for: "\"v1\"")
+      PlZipCodes::Builder.new(config: config, source: source).call
+      names_source = Object.new
+      names_source.define_singleton_method(:fetch) { raise "should not fetch names" }
+
+      result = PlZipCodes::Builder.new(
+        config: config,
+        source: source,
+        administrative_names_source: names_source
+      ).call
+
+      assert result.up_to_date?
+    end
+  end
+
+  def test_refuses_an_incomplete_administrative_names_dictionary
+    in_output_dir do |config|
+      names = PlZipCodes::Sources::PocztaPolska::Names.new(counties: {}, communes: {})
+      names_source = Object.new
+      names_source.define_singleton_method(:fetch) { names }
+      source = TestHelpers::StubSource.new(archive: @archive)
+
+      error = assert_raises(PlZipCodes::DownloadError) do
+        PlZipCodes::Builder.new(
+          config: config,
+          source: source,
+          administrative_names_source: names_source
+        ).call
+      end
+
+      assert_match(/0403/, error.message)
+      refute_path_exists config.data_path
+    end
+  end
+
   def test_failed_refresh_keeps_the_previous_dataset_and_manifest
     in_output_dir do |config|
       first = TestHelpers::StubSource.new(archive: @archive, etag: "\"v1\"")
@@ -62,6 +119,28 @@ class BuilderTest < Minitest::Test
       assert_equal previous_data, File.binread(config.data_path)
       assert_equal previous_manifest, File.binread(config.manifest_path)
       assert_empty Dir.glob(File.join(config.output_dir, "*.tmp"))
+    end
+  end
+
+  def test_failed_administrative_names_refresh_keeps_the_previous_files
+    in_output_dir do |config|
+      source = TestHelpers::StubSource.new(archive: @archive, etag: "\"v1\"")
+      PlZipCodes::Builder.new(config: config, source: source).call
+      previous_data = File.binread(config.data_path)
+      previous_manifest = File.binread(config.manifest_path)
+      failed_names = Object.new
+      failed_names.define_singleton_method(:fetch) { raise PlZipCodes::DownloadError, "Poczta nie działa" }
+
+      assert_raises(PlZipCodes::DownloadError) do
+        PlZipCodes::Builder.new(
+          config: config,
+          source: source,
+          administrative_names_source: failed_names
+        ).call
+      end
+
+      assert_equal previous_data, File.binread(config.data_path)
+      assert_equal previous_manifest, File.binread(config.manifest_path)
     end
   end
 
