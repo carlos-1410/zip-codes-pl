@@ -12,6 +12,9 @@
 
 ### Changed
 
+- County and commune names are refreshed from the public Poczta Polska search
+  by TERYT code. Requests are sequential, rate limited and honor `Retry-After`;
+  any incomplete response leaves the previous dataset untouched.
 - The built dataset ships with the gem, so reads work with no setup. A refreshed
   copy in your own directory takes precedence.
 - The dataset is a plain TSV instead of gzip, so a committed refresh produces a

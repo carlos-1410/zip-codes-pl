@@ -10,7 +10,8 @@ Gem::Specification.new do |spec|
   spec.summary = "Polskie kody pocztowe, miejscowości i województwa ze współrzędnymi"
   spec.description = "Buduje i odświeża lokalny zbiór polskich kodów pocztowych " \
                      "(PNA) wraz z miejscowością, województwem, kodami TERYT powiatu " \
-                     "i gminy oraz współrzędnymi. Dane pochodzą z GeoNames (CC-BY 4.0)."
+                     "i gminy oraz współrzędnymi. PNA i współrzędne pochodzą z GeoNames " \
+                     "(CC-BY 4.0), a nazwy administracyjne z Poczty Polskiej."
   spec.homepage = "https://github.com/carlos-1410/pl-zip-codes"
   spec.license = "MIT"
   spec.required_ruby_version = ">= 3.2.0"

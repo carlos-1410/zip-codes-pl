@@ -11,9 +11,12 @@ module PlZipCodes
       def up_to_date? = status == :up_to_date
     end
 
-    def initialize(config: PlZipCodes.config, source: nil)
+    def initialize(config: PlZipCodes.config, source: nil, administrative_names_source: nil)
+      default_source = source.nil?
       @config = config
       @source = source || Sources::Geonames.new(config: config)
+      @administrative_names_source = administrative_names_source
+      @administrative_names_source ||= Sources::PocztaPolska.new(config: config) if default_source
     end
 
     def call
@@ -21,12 +24,13 @@ module PlZipCodes
       download = source.download(etag: reusable_etag(previous))
       return Result.new(status: :up_to_date, data_path: config.data_path, manifest: previous) if download.nil?
 
-      write(download)
+      names = administrative_names_source&.fetch
+      write(download, names)
     end
 
     private
 
-    attr_reader :config, :source
+    attr_reader :administrative_names_source, :config, :source
 
     # Only claim a cached copy when the data file it describes is still there;
     # a 304 with no file on disk would leave the caller with nothing.
@@ -36,23 +40,24 @@ module PlZipCodes
       previous.etag
     end
 
-    def write(download)
+    def write(download, names)
       FileUtils.mkdir_p(config.output_dir)
-      row_count = write_data(download)
-      manifest = build_manifest(download, row_count).write(config.manifest_path)
+      row_count = write_data(download, names)
+      manifest = build_manifest(download, row_count, names).write(config.manifest_path)
 
       Result.new(status: :built, data_path: config.data_path, manifest: manifest)
     end
 
     # Written to a temporary file and renamed, so an interrupted run never
     # leaves a half-written dataset where a complete one used to be.
-    def write_data(download)
+    def write_data(download, names)
       temporary_path = "#{config.data_path}.tmp"
       row_count = 0
 
       File.open(temporary_path, "w") do |file|
         file.puts(Record::COLUMNS.join("\t"))
         source.each_record(download.body) do |record|
+          record = apply_administrative_names(record, names) if names
           file.puts(record.to_row.join("\t"))
           row_count += 1
         end
@@ -64,10 +69,29 @@ module PlZipCodes
       FileUtils.rm_f(temporary_path) if temporary_path && File.exist?(temporary_path)
     end
 
-    def build_manifest(download, row_count)
+    def apply_administrative_names(record, names)
+      county = name_for!(names.counties, record.county_teryt, "powiatu")
+      commune = name_for!(names.communes, record.commune_teryt, "gminy")
+      county = "powiat #{county}" if county && record.county_teryt[2, 2].to_i < 60
+
+      Record.new(**record.to_h, county: county, commune: commune)
+    end
+
+    def name_for!(names, code, level)
+      return nil if code.nil?
+
+      names.fetch(code) do
+        raise DownloadError, "brak nazwy #{level} dla kodu TERYT #{code} w odpowiedzi Poczty Polskiej"
+      end
+    end
+
+    def build_manifest(download, row_count, names)
+      attribution = Sources::Geonames::ATTRIBUTION
+      attribution = "#{attribution}; #{Sources::PocztaPolska::ATTRIBUTION}" if names
+
       Manifest.new(
         source_url: config.source_url,
-        attribution: Sources::Geonames::ATTRIBUTION,
+        attribution: attribution,
         etag: download.etag,
         last_modified: download.last_modified,
         row_count: row_count,

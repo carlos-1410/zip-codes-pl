@@ -44,6 +44,13 @@ rake pl_zip_codes:update[db/pna]    # into a directory you choose
 rake pl_zip_codes:info[db/pna]      # what is built, and when
 ```
 
+When the GeoNames extract has changed, the build fetches county and commune
+names by TERYT code from the public Poczta Polska search.
+Requests are sequential and spaced by at least 0.25 seconds by default; a `429`
+response delays the next request according to `Retry-After`. A full enrichment
+currently takes about five minutes. Poczta Polska is not queried after a
+`304 Not Modified` response from GeoNames.
+
 In a Rails application a railtie loads the tasks for you. Elsewhere, add one
 line to your `Rakefile`:
 
@@ -56,6 +63,7 @@ The output directory can also be set once:
 ```ruby
 PlZipCodes.configure do |config|
   config.output_dir = Rails.root.join("db/pna").to_s
+  config.poczta_request_interval = 0.5 # optionally go even slower
 end
 ```
 
@@ -93,8 +101,8 @@ When you want **places rather than codes**, there is a ready aggregation:
 PlZipCodes.cities.first
 # => #<data PlZipCodes::City
 #      name="Adamów", voivodeship="lubelskie", voivodeship_teryt="06",
-#      commune="Gmina Adamów", commune_teryt="060302",
-#      latitude=50.6..., longitude=22.5..., postal_codes=["21-412"]>
+#      commune="Adamów", commune_teryt="061103",
+#      latitude=51.7429, longitude=22.263, postal_codes=["21-412"]>
 ```
 
 A place's coordinate is the mean of its rows, because the source gives one point
@@ -141,13 +149,14 @@ produce a reviewable diff rather than a fresh opaque blob.
 | `city` | `Nowa Wieś Wielka` | |
 | `voivodeship` | `kujawsko-pomorskie` | from this gem, not from the source |
 | `voivodeship_teryt` | `04` | official TERYT code |
-| `county` / `county_teryt` | `Powiat bydgoski` / `0403` | name as received, see below |
-| `commune` / `commune_teryt` | `Gmina Koronowo` / `040304` | name as received |
+| `county` / `county_teryt` | `powiat bydgoski` / `0403` | Poczta Polska name joined by TERYT code |
+| `commune` / `commune_teryt` | `Koronowo` / `040304` | Poczta Polska name joined by TERYT code |
 | `latitude` / `longitude` | `53.3123` / `17.9539` | WGS84 |
 | `accuracy` | `6` | as reported by the source - see below |
 
-The file is written to a temporary path and renamed, so an interrupted download
-never replaces a complete dataset with half of one.
+The file is written to a temporary path and renamed. A GeoNames download,
+Poczta Polska response, parsing or validation failure leaves the previous TSV
+and manifest unchanged.
 
 ## What this gem does not pretend to do
 
@@ -163,16 +172,12 @@ that have a postal code in the GeoNames extract, under GeoNames' spelling. The
 official Polish register (TERYT SIMC) is larger and authoritative on names; the
 gap between the two has not been measured here.
 
-**Voivodeship names are corrected; county and commune names are not.** Below the
-first level the labels are passed through as received, and 36 of 374 counties
-carry artefacts such as `Leszno County`. **The `*_teryt` columns are the
-dependable identifiers**, not the names.
-
-The natural next step is pulling official Polish names from the Polish national
-mapping agency's SLN dictionary
-(`mapy.geoportal.gov.pl/wss/service/SLN/guest/sln`), which returns them together
-with TERYT codes - the whole administrative dictionary is about 397 JSON
-requests, and the join key is already in every row.
+**Administrative names are normalized by TERYT code.** The gem carries its own
+table for the 16 voivodeships and fetches current county and commune names from
+Poczta Polska during a refresh. The one explicit exception is historical code
+`320304` for the former Ostrowice commune, abolished on 1 January 2019, which is
+still present in GeoNames. **The `*_teryt` columns remain the dependable
+identifiers**, not the names.
 
 There are no streets or building numbers here, and this is not an address
 geocoder. For address-level lookups Poland has a free official service at
@@ -191,9 +196,9 @@ memory and the HTTP transport is exercised against stubbed responses.
 
 ## Source and licence
 
-The data comes from [GeoNames](https://www.geonames.org) under
-**CC BY 4.0**. If you redistribute a built dataset, or ship an application using
-one, you must credit that source. The manifest carries a ready attribution
-string.
+Postal data and coordinates come from [GeoNames](https://www.geonames.org)
+under **CC BY 4.0**. County and commune names are fetched from the public
+[Poczta Polska search](https://www.poczta-polska.pl/znajdz-kod-pocztowy/).
+The manifest carries a ready attribution string.
 
 The code is MIT licensed.
