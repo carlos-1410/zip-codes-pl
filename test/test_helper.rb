@@ -16,7 +16,9 @@ module TestHelpers
     "PL\t64-111\tKoronowo\tGreater Poland\t86\tLeszno_County\t3013\tLipno\t301302\t51.9277\t16.6163\t6",
     "PL\t88-420\tJeziora\tKujawsko-Pomorskie\t73\t\t\t\t\t52.6545\t17.7599\t6",
     "PL\t86-060\tNowa Wieś Wielka\tKujawsko-Pomorskie\t73\tPowiat bydgoski\t0403" \
-    "\tGmina Nowa Wieś Wielka\t040305\t53.0167\t18.0167\t6"
+    "\tGmina Nowa Wieś Wielka\t040305\t53.0167\t18.0167\t6",
+    "PL\t87-100\tNowa Wieś\tKujawsko-Pomorskie\t73\tToruń\t0463\tToruń\t046301\t53.0138\t18.5984\t6",
+    "PL\t89-200\tNowa Wieś\tKujawsko-Pomorskie\t73\tPowiat żniński\t0411\tŻnin\t041105\t52.8500\t17.7167\t6"
   ].freeze
 
   module_function

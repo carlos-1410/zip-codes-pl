@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-require "zlib"
-
 module PlZipCodes
   # The built dataset, read into memory once. Roughly 73 000 rows, so the whole
   # thing plus its indexes is small enough to keep resident rather than query.
@@ -9,7 +7,10 @@ module PlZipCodes
     # A place rather than a postal code: what a "cities" table wants. The
     # coordinate is the mean of the place's rows, because GeoNames gives one
     # point per postal code and a town can hold dozens.
-    City = Data.define(:name, :voivodeship, :voivodeship_teryt, :latitude, :longitude, :postal_codes)
+    City = Data.define(
+      :name, :voivodeship, :voivodeship_teryt, :commune, :commune_teryt,
+      :latitude, :longitude, :postal_codes
+    )
 
     attr_reader :records
 
@@ -17,11 +18,11 @@ module PlZipCodes
       raise DatasetError, "brak zbioru danych: #{path} (uruchom `rake pl_zip_codes:update`)" unless File.exist?(path)
 
       records = []
-      Zlib::GzipReader.open(path) do |gzip|
-        header = gzip.gets&.chomp&.split("\t")
+      File.open(path) do |file|
+        header = file.gets&.chomp&.split("\t")
         raise DatasetError, "nieoczekiwany nagłówek w #{path}" unless header == Record::COLUMNS.map(&:to_s)
 
-        gzip.each_line { |line| records << Record.from_row(line.chomp.split("\t", -1)) }
+        file.each_line { |line| records << Record.from_row(line.chomp.split("\t", -1)) }
       end
 
       new(records)
@@ -56,9 +57,9 @@ module PlZipCodes
 
     def cities
       @cities ||= begin
-        grouped = records.group_by { |record| [record.city, record.voivodeship_teryt] }
-        built = grouped.map { |(name, teryt), group| build_city(name, teryt, group) }
-        built.sort_by { |city| [Normalize.key(city.name), city.voivodeship_teryt] }.freeze
+        grouped = records.group_by { |record| [record.city, record.voivodeship_teryt, record.commune_teryt] }
+        built = grouped.map { |_key, group| build_city(group) }
+        built.sort_by { |city| [Normalize.key(city.name), city.voivodeship_teryt, city.commune_teryt.to_s] }.freeze
       end
     end
 
@@ -72,11 +73,17 @@ module PlZipCodes
       @by_city ||= records.group_by { |record| Normalize.key(record.city) }.freeze
     end
 
-    def build_city(name, teryt, group)
+    # Grouped by commune as well as name, because a voivodeship can hold dozens
+    # of distinct villages sharing a name - mazowieckie has 28 called "Nowa Wieś",
+    # and averaging them lands the point in a field 158 km from the farthest one.
+    def build_city(group)
+      first = group.first
       City.new(
-        name: name,
-        voivodeship: group.first.voivodeship,
-        voivodeship_teryt: teryt,
+        name: first.city,
+        voivodeship: first.voivodeship,
+        voivodeship_teryt: first.voivodeship_teryt,
+        commune: first.commune,
+        commune_teryt: first.commune_teryt,
         latitude: mean(group.map(&:latitude)),
         longitude: mean(group.map(&:longitude)),
         postal_codes: group.map(&:postal_code).uniq.sort.freeze

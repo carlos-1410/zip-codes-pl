@@ -5,8 +5,8 @@ require "test_helper"
 class DatasetTest < Minitest::Test
   def test_reads_back_everything_that_was_written
     with_dataset do |dataset|
-      assert_equal 5, dataset.size
-      assert_equal 5, dataset.count
+      assert_equal 7, dataset.size
+      assert_equal 7, dataset.count
     end
   end
 
@@ -46,9 +46,10 @@ class DatasetTest < Minitest::Test
     with_dataset do |dataset|
       cities = dataset.cities
 
-      assert_equal 5, cities.size
-      assert_equal ["Bydgoszcz", "Jeziora", "Koronowo", "Koronowo", "Nowa Wieś Wielka"], cities.map(&:name)
-      assert_equal %w[04 04 04 30 04], cities.map(&:voivodeship_teryt)
+      assert_equal 7, cities.size
+      assert_equal ["Bydgoszcz", "Jeziora", "Koronowo", "Koronowo", "Nowa Wieś", "Nowa Wieś", "Nowa Wieś Wielka"],
+                   cities.map(&:name)
+      assert_equal %w[04 04 04 30 04 04 04], cities.map(&:voivodeship_teryt)
     end
   end
 
@@ -71,9 +72,28 @@ class DatasetTest < Minitest::Test
     end
   end
 
+  def test_keeps_same_named_places_in_different_communes_apart
+    with_dataset do |dataset|
+      found = dataset.cities.select { |city| city.name == "Nowa Wieś" }
+
+      assert_equal 2, found.size
+      assert_equal %w[041105 046301], found.map(&:commune_teryt).sort
+      refute_in_delta found[0].longitude, found[1].longitude, 0.5
+    end
+  end
+
+  def test_a_city_carries_its_commune
+    with_dataset do |dataset|
+      bydgoszcz = dataset.cities.find { |city| city.name == "Bydgoszcz" }
+
+      assert_equal "046101", bydgoszcz.commune_teryt
+      assert_equal "Bydgoszcz", bydgoszcz.commune
+    end
+  end
+
   def test_refuses_to_load_a_dataset_that_is_not_there
     Dir.mktmpdir do |dir|
-      error = assert_raises(PlZipCodes::DatasetError) { PlZipCodes::Dataset.load(File.join(dir, "missing.tsv.gz")) }
+      error = assert_raises(PlZipCodes::DatasetError) { PlZipCodes::Dataset.load(File.join(dir, "missing.tsv")) }
 
       assert_match(/pl_zip_codes:update/, error.message)
     end
@@ -81,8 +101,8 @@ class DatasetTest < Minitest::Test
 
   def test_refuses_a_file_whose_columns_are_not_the_expected_ones
     Dir.mktmpdir do |dir|
-      path = File.join(dir, "wrong.tsv.gz")
-      Zlib::GzipWriter.open(path) { |gzip| gzip.puts("nope\tnope") }
+      path = File.join(dir, "wrong.tsv")
+      File.write(path, "nope\tnope\n")
 
       assert_raises(PlZipCodes::DatasetError) { PlZipCodes::Dataset.load(path) }
     end

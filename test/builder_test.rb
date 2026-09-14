@@ -14,7 +14,7 @@ class BuilderTest < Minitest::Test
       assert result.built?
       assert_path_exists config.data_path
       assert_path_exists config.manifest_path
-      assert_equal 5, result.manifest.row_count
+      assert_equal 7, result.manifest.row_count
       assert_equal PlZipCodes::VERSION, result.manifest.gem_version
       assert_match(/GeoNames/, result.manifest.attribution)
     end
@@ -41,7 +41,7 @@ class BuilderTest < Minitest::Test
 
       assert result.up_to_date?
       assert_equal written_at, File.mtime(config.data_path)
-      assert_equal 5, result.manifest.row_count
+      assert_equal 7, result.manifest.row_count
     end
   end
 

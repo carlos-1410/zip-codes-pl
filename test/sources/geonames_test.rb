@@ -10,8 +10,8 @@ class GeonamesTest < Minitest::Test
   def test_reads_every_row_of_the_archive
     records = @source.each_record(TestHelpers.geonames_archive).to_a
 
-    assert_equal 5, records.size
-    assert_equal %w[86-010 85-000 64-111 88-420 86-060], records.map(&:postal_code)
+    assert_equal 7, records.size
+    assert_equal %w[86-010 85-000 64-111 88-420 86-060 87-100 89-200], records.map(&:postal_code)
   end
 
   # The whole point of the gem: GeoNames says "Kujawsko-Pomorskie" for one row
