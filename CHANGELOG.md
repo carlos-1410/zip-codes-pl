@@ -34,5 +34,5 @@ First release.
   rather than dropping the row.
 - Reads back by postal code or by place name, ignoring case and diacritics, and
   aggregates rows into places with a mean coordinate.
-- Ships `pl_zip_codes:update` and `pl_zip_codes:info` rake tasks, loaded
+- Ships `zip_codes:pl:update` and `zip_codes:pl:info` rake tasks, loaded
   automatically in Rails.

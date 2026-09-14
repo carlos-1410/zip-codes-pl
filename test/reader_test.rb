@@ -124,9 +124,9 @@ class ReaderTest < Minitest::Test
 
   def test_refuses_to_load_a_dataset_that_is_not_there
     Dir.mktmpdir do |dir|
-      error = assert_raises(PlZipCodes::DatasetError) { PlZipCodes::Reader.new(File.join(dir, "missing.tsv")).find_by_postal_code("86-010") }
+      error = assert_raises(ZipCodes::PL::DatasetError) { ZipCodes::PL::Reader.new(File.join(dir, "missing.tsv")).find_by_postal_code("86-010") }
 
-      assert_match(/pl_zip_codes:update/, error.message)
+      assert_match(/zip_codes:pl:update/, error.message)
     end
   end
 
@@ -135,7 +135,7 @@ class ReaderTest < Minitest::Test
       path = File.join(dir, "wrong.tsv")
       File.write(path, "nope\tnope\n")
 
-      assert_raises(PlZipCodes::DatasetError) { PlZipCodes::Reader.new(path).to_a }
+      assert_raises(ZipCodes::PL::DatasetError) { ZipCodes::PL::Reader.new(path).to_a }
     end
   end
 
@@ -143,12 +143,12 @@ class ReaderTest < Minitest::Test
 
   def with_reader(rows: TestHelpers::SAMPLE_ROWS)
     Dir.mktmpdir do |dir|
-      config = PlZipCodes::Configuration.new
+      config = ZipCodes::PL::Configuration.new
       config.output_dir = dir
       source = TestHelpers::StubSource.new(archive: TestHelpers.geonames_archive(rows: rows))
-      PlZipCodes::Builder.new(config: config, source: source, administrative_names_source: false).call
+      ZipCodes::PL::Builder.new(config: config, source: source, administrative_names_source: false).call
 
-      yield PlZipCodes::Reader.new(config.data_path)
+      yield ZipCodes::PL::Reader.new(config.data_path)
     end
   end
 end

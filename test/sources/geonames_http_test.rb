@@ -6,7 +6,7 @@ require "test_helper"
 # is here because the real server answered one and the redirect handling ate it.
 class GeonamesHttpTest < Minitest::Test
   def setup
-    @source = PlZipCodes::Sources::Geonames.new
+    @source = ZipCodes::PL::Sources::Geonames.new
   end
 
   def test_not_modified_reports_no_download
@@ -50,13 +50,13 @@ class GeonamesHttpTest < Minitest::Test
     moved = -> { response(Net::HTTPMovedPermanently, "301", headers: { "location" => "https://example.test/again.zip" }) }
 
     with_responses(Array.new(5) { moved.call }) do
-      assert_raises(PlZipCodes::DownloadError) { @source.download }
+      assert_raises(ZipCodes::PL::DownloadError) { @source.download }
     end
   end
 
   def test_reports_an_error_status
     with_responses([response(Net::HTTPServerError, "500")]) do
-      error = assert_raises(PlZipCodes::DownloadError) { @source.download }
+      error = assert_raises(ZipCodes::PL::DownloadError) { @source.download }
 
       assert_match(/500/, error.message)
     end

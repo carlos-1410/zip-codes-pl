@@ -9,6 +9,6 @@ Rake::TestTask.new(:test) do |t|
 end
 
 $LOAD_PATH.unshift File.expand_path("lib", __dir__)
-load File.expand_path("lib/pl_zip_codes/tasks/pl_zip_codes.rake", __dir__)
+load File.expand_path("lib/zip_codes/pl/tasks/zip_codes_pl.rake", __dir__)
 
 task default: :test

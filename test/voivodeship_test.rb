@@ -3,7 +3,7 @@
 require "test_helper"
 
 class VoivodeshipTest < Minitest::Test
-  Voivodeship = PlZipCodes::Voivodeship
+  Voivodeship = ZipCodes::PL::Voivodeship
 
   def test_covers_all_sixteen_voivodeships
     assert_equal 16, Voivodeship.all.size

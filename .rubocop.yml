@@ -26,7 +26,7 @@ Metrics/ClassLength:
 
 Naming/FileName:
   Exclude:
-    - "lib/pl-zip-codes.rb"
+    - "lib/zip-codes-pl.rb"
 
 Metrics/AbcSize:
   Max: 25

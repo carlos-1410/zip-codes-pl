@@ -1,4 +1,4 @@
-# pl-zip-codes
+# zip-codes-pl
 
 Polish postal codes, places and voivodeships **with coordinates**, built and
 refreshed by a single rake task.
@@ -30,7 +30,7 @@ Polish register.
 ## Installation
 
 ```ruby
-gem "pl-zip-codes"
+gem "zip-codes-pl"
 ```
 
 ## Refreshing the dataset
@@ -39,9 +39,9 @@ GeoNames republishes daily. To pick up a newer extract than the one bundled with
 your installed version:
 
 ```bash
-rake pl_zip_codes:update            # into the default directory (data/)
-rake pl_zip_codes:update[db/pna]    # into a directory you choose
-rake pl_zip_codes:info[db/pna]      # what is built, and when
+rake zip_codes:pl:update            # into the default directory (data/)
+rake zip_codes:pl:update[db/pna]    # into a directory you choose
+rake zip_codes:pl:info[db/pna]      # what is built, and when
 ```
 
 When the GeoNames extract has changed, the build fetches county and commune
@@ -55,34 +55,34 @@ In a Rails application a railtie loads the tasks for you. Elsewhere, add one
 line to your `Rakefile`:
 
 ```ruby
-load Gem::Specification.find_by_name("pl-zip-codes").gem_dir + "/lib/pl_zip_codes/tasks/pl_zip_codes.rake"
+load Gem::Specification.find_by_name("zip-codes-pl").gem_dir + "/lib/zip_codes/pl/tasks/zip_codes_pl.rake"
 ```
 
 The output directory can also be set once:
 
 ```ruby
-PlZipCodes.configure do |config|
+ZipCodes::PL.configure do |config|
   config.output_dir = Rails.root.join("db/pna").to_s
   config.poczta_request_interval = 0.5 # optionally go even slower
 end
 ```
 
-or through the `PL_ZIP_CODES_DIR` environment variable. Reads look there first
+or through the `ZIP_CODES_PL_DIR` environment variable. Reads look there first
 and fall back to the bundled dataset, so configuring a directory that has not
 been refreshed yet changes nothing.
 
 ## Usage
 
 ```ruby
-PlZipCodes.find_by_postal_code("86-010")   # "86010" works too
-# => [#<data PlZipCodes::Record postal_code="86-010", city="Koronowo", ...>, ...]
+ZipCodes::PL.find_by_postal_code("86-010")   # "86010" works too
+# => [#<data ZipCodes::PL::Record postal_code="86-010", city="Koronowo", ...>, ...]
 
-PlZipCodes.find_by_city("zlotow")          # case and diacritics insensitive
-PlZipCodes.find_by_city("Koronowo", voivodeship: "kujawsko-pomorskie")
-PlZipCodes.search_by_city("wie")           # name fragment, e.g. "Nowa Wieś"
-PlZipCodes.search_by_city("OS")            # exactly "Oś"
+ZipCodes::PL.find_by_city("zlotow")          # case and diacritics insensitive
+ZipCodes::PL.find_by_city("Koronowo", voivodeship: "kujawsko-pomorskie")
+ZipCodes::PL.search_by_city("wie")           # name fragment, e.g. "Nowa Wieś"
+ZipCodes::PL.search_by_city("OS")            # exactly "Oś"
 
-PlZipCodes.voivodeships
+ZipCodes::PL.voivodeships
 # => 16 records: TERYT code, Polish name, ASCII slug
 ```
 
@@ -98,8 +98,8 @@ several records, and so does a code shared by several villages - `86-010` covers
 When you want **places rather than codes**, there is a ready aggregation:
 
 ```ruby
-PlZipCodes.cities.first
-# => #<data PlZipCodes::City
+ZipCodes::PL.cities.first
+# => #<data ZipCodes::PL::City
 #      name="Abisynia", voivodeship="pomorskie", voivodeship_teryt="22",
 #      commune="Karsin", commune_teryt="220603",
 #      latitude=53.9244, longitude=17.9337, postal_codes=["83-440"]>
@@ -117,7 +117,7 @@ by name puts the resulting point in a field up to 158 km from the farthest one.
 Raw records can be imported in batches without loading the entire file:
 
 ```ruby
-PlZipCodes.each_record.each_slice(1000) do |batch|
+ZipCodes::PL.each_record.each_slice(1000) do |batch|
   PostalCode.upsert_all(batch.map(&:to_h))
 end
 ```
@@ -125,7 +125,7 @@ end
 Or import the aggregated places:
 
 ```ruby
-PlZipCodes.cities.each_slice(1000) do |batch|
+ZipCodes::PL.cities.each_slice(1000) do |batch|
   City.upsert_all(
     batch.map do |city|
       { name: city.name, province: city.voivodeship,
@@ -138,8 +138,8 @@ end
 
 ## File format
 
-`pl-zip-codes.tsv` - tab separated with a header row, next to
-`pl-zip-codes.manifest.json` holding the source ETag, build time and row count.
+`zip-codes-pl.tsv` - tab separated with a header row, next to
+`zip-codes-pl.manifest.json` holding the source ETag, build time and row count.
 It is left uncompressed on purpose: the file is committed, and a refresh should
 produce a reviewable diff rather than a fresh opaque blob.
 

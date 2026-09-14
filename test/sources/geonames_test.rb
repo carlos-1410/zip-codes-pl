@@ -4,7 +4,7 @@ require "test_helper"
 
 class GeonamesTest < Minitest::Test
   def setup
-    @source = PlZipCodes::Sources::Geonames.new
+    @source = ZipCodes::PL::Sources::Geonames.new
   end
 
   def test_reads_every_row_of_the_archive
@@ -60,7 +60,7 @@ class GeonamesTest < Minitest::Test
   def test_refuses_an_unknown_voivodeship_code
     rows = ["PL\t00-001\tNigdzie\tAtlantis\t99\t\t\t\t\t50.0\t20.0\t6"]
 
-    error = assert_raises(PlZipCodes::DownloadError) do
+    error = assert_raises(ZipCodes::PL::DownloadError) do
       @source.each_record(TestHelpers.geonames_archive(rows: rows)).to_a
     end
 
@@ -70,7 +70,7 @@ class GeonamesTest < Minitest::Test
   def test_refuses_an_archive_without_the_expected_entry
     archive = TestHelpers.geonames_archive(entry: "SOMETHING_ELSE.txt")
 
-    assert_raises(PlZipCodes::DownloadError) { @source.each_record(archive).to_a }
+    assert_raises(ZipCodes::PL::DownloadError) { @source.each_record(archive).to_a }
   end
 
   def test_skips_blank_lines
@@ -82,7 +82,7 @@ class GeonamesTest < Minitest::Test
   def test_refuses_a_short_row
     rows = [TestHelpers::SAMPLE_ROWS.first, "PL\t86-010"]
 
-    assert_raises(PlZipCodes::DownloadError) do
+    assert_raises(ZipCodes::PL::DownloadError) do
       @source.each_record(TestHelpers.geonames_archive(rows: rows)).to_a
     end
   end

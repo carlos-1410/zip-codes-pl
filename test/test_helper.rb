@@ -5,7 +5,7 @@ require "stringio"
 require "tmpdir"
 require "zip"
 
-require "pl_zip_codes"
+require "zip_codes/pl"
 
 module TestHelpers
   # Two real rows plus one with an empty commune, which the live export contains
@@ -23,7 +23,7 @@ module TestHelpers
 
   module_function
 
-  def geonames_archive(rows: SAMPLE_ROWS, entry: PlZipCodes::Sources::Geonames::ENTRY)
+  def geonames_archive(rows: SAMPLE_ROWS, entry: ZipCodes::PL::Sources::Geonames::ENTRY)
     buffer = Zip::OutputStream.write_buffer(StringIO.new(+"")) do |zip|
       zip.put_next_entry(entry)
       zip.write("#{rows.join("\n")}\n")
@@ -40,14 +40,14 @@ module TestHelpers
       @etag = etag
       @not_modified_for = not_modified_for
       @requested_etags = []
-      @real = PlZipCodes::Sources::Geonames.new
+      @real = ZipCodes::PL::Sources::Geonames.new
     end
 
     def download(etag: nil)
       @requested_etags << etag
       return nil if @not_modified_for && etag == @not_modified_for
 
-      PlZipCodes::Sources::Geonames::Download.new(
+      ZipCodes::PL::Sources::Geonames::Download.new(
         body: @archive, etag: @etag, last_modified: "Mon, 14 Sep 2026 03:05:00 GMT"
       )
     end

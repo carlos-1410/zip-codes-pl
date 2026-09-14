@@ -3,7 +3,7 @@
 require "test_helper"
 
 class NormalizeTest < Minitest::Test
-  Normalize = PlZipCodes::Normalize
+  Normalize = ZipCodes::PL::Normalize
 
   def test_folds_case_and_polish_diacritics
     assert_equal "zlotow", Normalize.key("Złotów")

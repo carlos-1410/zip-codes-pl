@@ -3,7 +3,7 @@
 require "test_helper"
 
 class RecordTest < Minitest::Test
-  Record = PlZipCodes::Record
+  Record = ZipCodes::PL::Record
 
   def test_survives_a_round_trip_through_a_row
     record = build_record

@@ -1,4 +1,4 @@
-# pl-zip-codes
+# zip-codes-pl
 
 *(English documentation: [README.md](README.md))*
 
@@ -18,7 +18,7 @@ skanuje plik bez budowania indeksu i bez trzymania całego zbioru w pamięci.
 ## Instalacja
 
 ```ruby
-gem "pl-zip-codes"
+gem "zip-codes-pl"
 ```
 
 ## Odświeżanie zbioru
@@ -26,9 +26,9 @@ gem "pl-zip-codes"
 GeoNames publikuje codziennie. Żeby wziąć nowszy zrzut niż ten w twojej wersji:
 
 ```bash
-rake pl_zip_codes:update            # do katalogu domyślnego (data/)
-rake pl_zip_codes:update[db/pna]    # do wskazanego katalogu
-rake pl_zip_codes:info[db/pna]      # co jest zbudowane i z kiedy
+rake zip_codes:pl:update            # do katalogu domyślnego (data/)
+rake zip_codes:pl:update[db/pna]    # do wskazanego katalogu
+rake zip_codes:pl:info[db/pna]      # co jest zbudowane i z kiedy
 ```
 
 Kiedy zrzut GeoNames się zmienił, build dociąga z publicznej wyszukiwarki
@@ -42,34 +42,34 @@ W aplikacji Rails zadanie podpina się samo przez railtie. Poza Railsami dodaj d
 swojego `Rakefile`:
 
 ```ruby
-load Gem::Specification.find_by_name("pl-zip-codes").gem_dir + "/lib/pl_zip_codes/tasks/pl_zip_codes.rake"
+load Gem::Specification.find_by_name("zip-codes-pl").gem_dir + "/lib/zip_codes/pl/tasks/zip_codes_pl.rake"
 ```
 
 Katalog wyjściowy ustawia się też na stałe:
 
 ```ruby
-PlZipCodes.configure do |config|
+ZipCodes::PL.configure do |config|
   config.output_dir = Rails.root.join("db/pna").to_s
   config.poczta_request_interval = 0.5 # opcjonalnie jeszcze wolniej
 end
 ```
 
-albo zmienną `PL_ZIP_CODES_DIR`. Odczyt najpierw zagląda tam, a w razie braku
+albo zmienną `ZIP_CODES_PL_DIR`. Odczyt najpierw zagląda tam, a w razie braku
 pliku sięga po zbiór z gema - ustawienie katalogu, którego jeszcze nie
 odświeżyłeś, niczego nie psuje.
 
 ## Użycie
 
 ```ruby
-PlZipCodes.find_by_postal_code("86-010")   # działa też "86010"
-# => [#<data PlZipCodes::Record postal_code="86-010", city="Koronowo", ...>, ...]
+ZipCodes::PL.find_by_postal_code("86-010")   # działa też "86010"
+# => [#<data ZipCodes::PL::Record postal_code="86-010", city="Koronowo", ...>, ...]
 
-PlZipCodes.find_by_city("zlotow")          # bez ogonków i wielkości liter
-PlZipCodes.find_by_city("Koronowo", voivodeship: "kujawsko-pomorskie")
-PlZipCodes.search_by_city("wie")           # fragment nazwy, np. "Nowa Wieś"
-PlZipCodes.search_by_city("OS")            # dokładnie "Oś"
+ZipCodes::PL.find_by_city("zlotow")          # bez ogonków i wielkości liter
+ZipCodes::PL.find_by_city("Koronowo", voivodeship: "kujawsko-pomorskie")
+ZipCodes::PL.search_by_city("wie")           # fragment nazwy, np. "Nowa Wieś"
+ZipCodes::PL.search_by_city("OS")            # dokładnie "Oś"
 
-PlZipCodes.voivodeships
+ZipCodes::PL.voivodeships
 # => 16 rekordów: kod TERYT, nazwa, slug bez polskich znaków
 ```
 
@@ -85,8 +85,8 @@ kodami ma kilka rekordów, tak samo kod dzielony przez kilka wsi - `86-010` to
 Kiedy potrzebujesz **miejscowości, a nie kodów**, jest gotowa agregacja:
 
 ```ruby
-PlZipCodes.cities.first
-# => #<data PlZipCodes::City
+ZipCodes::PL.cities.first
+# => #<data ZipCodes::PL::City
 #      name="Abisynia", voivodeship="pomorskie", voivodeship_teryt="22",
 #      commune="Karsin", commune_teryt="220603",
 #      latitude=53.9244, longitude=17.9337, postal_codes=["83-440"]>
@@ -104,7 +104,7 @@ wystawia punkt w polu, nawet 158 km od najdalszej z nich.
 Surowe rekordy można importować partiami bez wczytywania całego pliku:
 
 ```ruby
-PlZipCodes.each_record.each_slice(1000) do |batch|
+ZipCodes::PL.each_record.each_slice(1000) do |batch|
   PostalCode.upsert_all(batch.map(&:to_h))
 end
 ```
@@ -112,7 +112,7 @@ end
 Albo zapisać zagregowane miejscowości:
 
 ```ruby
-PlZipCodes.cities.each_slice(1000) do |batch|
+ZipCodes::PL.cities.each_slice(1000) do |batch|
   City.upsert_all(
     batch.map do |city|
       { name: city.name, province: city.voivodeship,
@@ -125,7 +125,7 @@ end
 
 ## Format pliku
 
-`pl-zip-codes.tsv` - TSV z nagłówkiem, obok `pl-zip-codes.manifest.json` z
+`zip-codes-pl.tsv` - TSV z nagłówkiem, obok `zip-codes-pl.manifest.json` z
 ETagiem źródła, datą budowy i liczbą wierszy. Celowo nieskompresowany: plik jest
 commitowany, więc odświeżenie ma dawać diff do przejrzenia, a nie nowy nieczytelny
 blob. Kolumny:

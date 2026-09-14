@@ -42,10 +42,10 @@ class PocztaPolskaTest < Minitest::Test
     limited = Array.new(20) { response(Net::HTTPTooManyRequests, "429", headers: { "retry-after" => "1" }) }
     source = source_with(*limited, sleeper: ->(seconds) { waits << seconds })
 
-    error = assert_raises(PlZipCodes::DownloadError) { source.fetch }
+    error = assert_raises(ZipCodes::PL::DownloadError) { source.fetch }
 
     assert_match(/ogranicza ruch/, error.message)
-    assert_equal PlZipCodes::Sources::PocztaPolska::Client::MAX_ATTEMPTS, waits.count(1.0)
+    assert_equal ZipCodes::PL::Sources::PocztaPolska::Client::MAX_ATTEMPTS, waits.count(1.0)
   end
 
   # sleep(-1) raises, so an absurd header must not reach the sleeper unclamped.
@@ -62,14 +62,14 @@ class PocztaPolskaTest < Minitest::Test
     source.fetch
 
     assert_includes waits, 0.0
-    assert_includes waits, PlZipCodes::Sources::PocztaPolska::Client::MAX_RETRY_DELAY
+    assert_includes waits, ZipCodes::PL::Sources::PocztaPolska::Client::MAX_RETRY_DELAY
     assert(waits.none?(&:negative?))
   end
 
   def test_reports_where_a_moved_endpoint_went
     moved = response(Net::HTTPMovedPermanently, "301", headers: { "location" => "https://example.test/new" })
 
-    error = assert_raises(PlZipCodes::DownloadError) { source_with(moved).fetch }
+    error = assert_raises(ZipCodes::PL::DownloadError) { source_with(moved).fetch }
 
     assert_match(%r{https://example.test/new}, error.message)
   end
@@ -79,20 +79,20 @@ class PocztaPolskaTest < Minitest::Test
   def test_rejects_a_non_string_value
     source = source_with(response(Net::HTTPOK, "200", body: '[{"name":"leszczyński","value":3013}]'))
 
-    assert_raises(PlZipCodes::DownloadError) { source.fetch }
+    assert_raises(ZipCodes::PL::DownloadError) { source.fetch }
   end
 
   # 204 is a success to Net::HTTP, and JSON.parse(nil) raises TypeError.
   def test_rejects_a_success_with_no_body
     source = source_with(response(Net::HTTPNoContent, "204"))
 
-    assert_raises(PlZipCodes::DownloadError) { source.fetch }
+    assert_raises(ZipCodes::PL::DownloadError) { source.fetch }
   end
 
   def test_rejects_an_invalid_response
     source = source_with(response(Net::HTTPOK, "200", body: "not json"))
 
-    assert_raises(PlZipCodes::DownloadError) { source.fetch }
+    assert_raises(ZipCodes::PL::DownloadError) { source.fetch }
   end
 
   private
@@ -100,12 +100,12 @@ class PocztaPolskaTest < Minitest::Test
   def source_with(*responses, sleeper: ->(_seconds) {})
     queue = responses.dup
     transport = ->(_uri, _params) { queue.shift }
-    voivodeships = [PlZipCodes::Voivodeship.find_by_teryt_code("30")]
-    config = PlZipCodes::Configuration.new
+    voivodeships = [ZipCodes::PL::Voivodeship.find_by_teryt_code("30")]
+    config = ZipCodes::PL::Configuration.new
     config.poczta_request_interval = 0.1
-    client = PlZipCodes::Sources::PocztaPolska::Client.new(config: config, sleeper: sleeper, transport: transport)
+    client = ZipCodes::PL::Sources::PocztaPolska::Client.new(config: config, sleeper: sleeper, transport: transport)
 
-    PlZipCodes::Sources::PocztaPolska.new(
+    ZipCodes::PL::Sources::PocztaPolska.new(
       client: client,
       voivodeships: voivodeships
     )
