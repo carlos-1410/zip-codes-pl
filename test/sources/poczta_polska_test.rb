@@ -36,6 +36,59 @@ class PocztaPolskaTest < Minitest::Test
     assert(waits.any? { |seconds| (seconds - 0.1).abs < 0.001 })
   end
 
+  # Sustained throttling used to spin forever instead of failing.
+  def test_gives_up_after_repeated_rate_limiting
+    waits = []
+    limited = Array.new(20) { response(Net::HTTPTooManyRequests, "429", headers: { "retry-after" => "1" }) }
+    source = source_with(*limited, sleeper: ->(seconds) { waits << seconds })
+
+    error = assert_raises(PlZipCodes::DownloadError) { source.fetch }
+
+    assert_match(/ogranicza ruch/, error.message)
+    assert_equal PlZipCodes::Sources::PocztaPolska::Client::MAX_ATTEMPTS, waits.count(1.0)
+  end
+
+  # sleep(-1) raises, so an absurd header must not reach the sleeper unclamped.
+  def test_clamps_a_hostile_retry_after
+    waits = []
+    source = source_with(
+      response(Net::HTTPTooManyRequests, "429", headers: { "retry-after" => "-1" }),
+      response(Net::HTTPTooManyRequests, "429", headers: { "retry-after" => "99999" }),
+      response(Net::HTTPOK, "200", body: '[{"name":"leszczyński","value":"3013"}]'),
+      response(Net::HTTPOK, "200", body: '[{"name":"Lipno (wiejska)","value":"3013022"}]'),
+      sleeper: ->(seconds) { waits << seconds }
+    )
+
+    source.fetch
+
+    assert_includes waits, 0.0
+    assert_includes waits, PlZipCodes::Sources::PocztaPolska::Client::MAX_RETRY_DELAY
+    assert(waits.none?(&:negative?))
+  end
+
+  def test_reports_where_a_moved_endpoint_went
+    moved = response(Net::HTTPMovedPermanently, "301", headers: { "location" => "https://example.test/new" })
+
+    error = assert_raises(PlZipCodes::DownloadError) { source_with(moved).fetch }
+
+    assert_match(%r{https://example.test/new}, error.message)
+  end
+
+  # A number where a code belongs reached String methods and surfaced as
+  # NoMethodError instead of a controlled failure.
+  def test_rejects_a_non_string_value
+    source = source_with(response(Net::HTTPOK, "200", body: '[{"name":"leszczyński","value":3013}]'))
+
+    assert_raises(PlZipCodes::DownloadError) { source.fetch }
+  end
+
+  # 204 is a success to Net::HTTP, and JSON.parse(nil) raises TypeError.
+  def test_rejects_a_success_with_no_body
+    source = source_with(response(Net::HTTPNoContent, "204"))
+
+    assert_raises(PlZipCodes::DownloadError) { source.fetch }
+  end
+
   def test_rejects_an_invalid_response
     source = source_with(response(Net::HTTPOK, "200", body: "not json"))
 
