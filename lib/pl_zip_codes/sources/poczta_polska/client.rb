@@ -7,6 +7,9 @@ module PlZipCodes
   module Sources
     class PocztaPolska
       class Client
+        MAX_ATTEMPTS = 5
+        MAX_RETRY_DELAY = 30.0
+
         def initialize(
           config:,
           sleeper: ->(seconds) { sleep(seconds) },
@@ -20,23 +23,23 @@ module PlZipCodes
           @last_request_at = nil
         end
 
+        # Retries rate limiting a bounded number of times. An unbounded loop here
+        # would turn sustained throttling into a refresh that never finishes and
+        # never says why.
         def post_form(uri, params)
-          loop do
+          MAX_ATTEMPTS.times do
             throttle
             response = transport.call(uri, params)
             @last_request_at = clock.call
 
-            if response.is_a?(Net::HTTPTooManyRequests)
-              sleeper.call(retry_after(response))
-              next
-            end
+            return response if response.is_a?(Net::HTTPSuccess)
 
-            unless response.is_a?(Net::HTTPSuccess)
-              raise DownloadError, "Poczta Polska odpowiedziała #{response.code} dla #{uri}"
-            end
+            raise DownloadError, failure_message(response, uri) unless response.is_a?(Net::HTTPTooManyRequests)
 
-            return response
+            sleeper.call(retry_after(response))
           end
+
+          raise DownloadError, "Poczta Polska ogranicza ruch - #{MAX_ATTEMPTS} prób dla #{uri}"
         end
 
         private
@@ -50,15 +53,22 @@ module PlZipCodes
           sleeper.call(remaining) if remaining.positive?
         end
 
+        # Clamped at both ends: a hostile or broken header must not make the
+        # build sleep backwards, which raises, nor park it for an hour.
         def retry_after(response)
           value = response["retry-after"]
-          seconds = Float(value, exception: false)
-          return seconds if seconds
-
-          retry_at = Time.httpdate(value.to_s)
-          [retry_at - Time.now, 0].max
+          seconds = Float(value, exception: false) || (Time.httpdate(value.to_s) - Time.now)
+          seconds.clamp(0.0, MAX_RETRY_DELAY)
         rescue ArgumentError
           [request_interval, 1.0].max
+        end
+
+        # A moved endpoint is reported rather than followed: this is a POST to a
+        # form, and replaying it against an unknown location is not a safe guess.
+        def failure_message(response, uri)
+          message = "Poczta Polska odpowiedziała #{response.code} dla #{uri}"
+          location = response["location"] if response.is_a?(Net::HTTPRedirection)
+          location ? "#{message} (przekierowanie na #{location})" : message
         end
 
         def post(uri, params, config)
