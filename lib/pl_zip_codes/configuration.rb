@@ -11,7 +11,7 @@ module PlZipCodes
     def initialize
       @output_dir = ENV.fetch("PL_ZIP_CODES_DIR", DEFAULT_OUTPUT_DIR)
       @source_url = Sources::Geonames::URL
-      @user_agent = "pl-zip-codes/#{VERSION} (+https://github.com/lkerl/pl-zip-codes)"
+      @user_agent = "pl-zip-codes/#{VERSION} (+https://github.com/carlos-1410/pl-zip-codes)"
       @open_timeout = 10
       @read_timeout = 60
     end

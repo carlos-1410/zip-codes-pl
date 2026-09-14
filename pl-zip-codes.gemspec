@@ -11,7 +11,7 @@ Gem::Specification.new do |spec|
   spec.description = "Buduje i odświeża lokalny zbiór polskich kodów pocztowych " \
                      "(PNA) wraz z miejscowością, województwem, kodami TERYT powiatu " \
                      "i gminy oraz współrzędnymi. Dane pochodzą z GeoNames (CC-BY 4.0)."
-  spec.homepage = "https://github.com/lkerl/pl-zip-codes"
+  spec.homepage = "https://github.com/carlos-1410/pl-zip-codes"
   spec.license = "MIT"
   spec.required_ruby_version = ">= 3.2.0"
 
@@ -19,7 +19,7 @@ Gem::Specification.new do |spec|
   spec.metadata["source_code_uri"] = spec.homepage
   spec.metadata["rubygems_mfa_required"] = "true"
 
-  spec.files = Dir["lib/**/*.rb", "lib/**/*.rake", "README.md", "LICENSE.txt"]
+  spec.files = Dir["lib/**/*.rb", "lib/**/*.rake", "README.md", "README.pl.md", "LICENSE.txt"]
   spec.require_paths = ["lib"]
 
   spec.add_dependency "rubyzip", ">= 2.3", "< 4"

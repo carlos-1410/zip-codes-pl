@@ -1,38 +1,53 @@
 # pl-zip-codes
 
-Polskie kody pocztowe, miejscowości i województwa **ze współrzędnymi**, budowane
-i odświeżane jednym zadaniem rake.
+Polish postal codes, places and voivodeships **with coordinates**, built and
+refreshed by a single rake task.
 
-Gem nie wozi danych w paczce. Przy pierwszym uruchomieniu pobiera źródło,
-przelicza je na jeden skompresowany plik TSV i zapisuje we wskazanym katalogu.
-Kolejne uruchomienia pytają serwer o zmianę nagłówkiem `If-None-Match` i jeśli
-nic się nie zmieniło, nie pobierają ani bajta.
+*(Dokumentacja po polsku: [README.pl.md](README.pl.md))*
 
-Aktualny zbiór to **72 899 wierszy**, **20 299 kodów pocztowych** i **45 511
-miejscowości** w 16 województwach. Plik waży ok. 980 kB.
+The gem ships no data. On first run it downloads the source, turns it into one
+compressed TSV file in a directory you choose, and records where it came from.
+Every later run asks the server with `If-None-Match` and downloads nothing when
+the source has not changed.
 
-## Instalacja
+The current dataset is **72,899 rows**, **20,299 postal codes** and **45,511
+places** across 16 voivodeships, in a file of about 980 kB.
+
+## Why this exists
+
+GeoNames is an excellent source of Polish postal codes and coordinates, and a
+poor source of Polish *names*. It labels all sixteen voivodeships in English and
+inconsistently — `Lower Silesia`, `Warmia-Masuria`, `Łódź Voivodeship` — which is
+not something you can put in front of a Polish user.
+
+This gem carries its own verified table of the sixteen voivodeships, mapped onto
+the official **TERYT** codes used by Polish public administration, and replaces
+the upstream labels with it. The TERYT county and commune codes that GeoNames
+does carry are passed through, so the result joins cleanly against any other
+Polish register.
+
+## Installation
 
 ```ruby
 gem "pl-zip-codes"
 ```
 
-## Budowanie zbioru
+## Building the dataset
 
 ```bash
-rake pl_zip_codes:update            # do katalogu domyślnego (data/)
-rake pl_zip_codes:update[db/pna]    # do wskazanego katalogu
-rake pl_zip_codes:info[db/pna]      # co jest zbudowane i z kiedy
+rake pl_zip_codes:update            # into the default directory (data/)
+rake pl_zip_codes:update[db/pna]    # into a directory you choose
+rake pl_zip_codes:info[db/pna]      # what is built, and when
 ```
 
-W aplikacji Rails zadanie podpina się samo przez railtie. Poza Railsami dodaj do
-swojego `Rakefile`:
+In a Rails application a railtie loads the tasks for you. Elsewhere, add one
+line to your `Rakefile`:
 
 ```ruby
 load Gem::Specification.find_by_name("pl-zip-codes").gem_dir + "/lib/pl_zip_codes/tasks/pl_zip_codes.rake"
 ```
 
-Katalog wyjściowy ustawia się też na stałe:
+The output directory can also be set once:
 
 ```ruby
 PlZipCodes.configure do |config|
@@ -40,26 +55,26 @@ PlZipCodes.configure do |config|
 end
 ```
 
-albo zmienną `PL_ZIP_CODES_DIR`.
+or through the `PL_ZIP_CODES_DIR` environment variable.
 
-## Użycie
+## Usage
 
 ```ruby
-PlZipCodes.find_by_postal_code("86-010")   # działa też "86010"
+PlZipCodes.find_by_postal_code("86-010")   # "86010" works too
 # => [#<data PlZipCodes::Record postal_code="86-010", city="Koronowo", ...>, ...]
 
-PlZipCodes.find_by_city("zlotow")          # bez ogonków i wielkości liter
+PlZipCodes.find_by_city("zlotow")          # case and diacritics insensitive
 PlZipCodes.find_by_city("Koronowo", voivodeship: "wielkopolskie")
 
 PlZipCodes.voivodeships
-# => 16 rekordów: kod TERYT, nazwa, slug bez polskich znaków
+# => 16 records: TERYT code, Polish name, ASCII slug
 ```
 
-Jeden rekord to jeden kod pocztowy w jednej miejscowości. Miejscowość z kilkoma
-kodami ma kilka rekordów, tak samo kod dzielony przez kilka wsi — `86-010` to
-42 miejscowości wokół Koronowa.
+One record is one postal code in one place. A town with several codes has
+several records, and so does a code shared by several villages — `86-010` covers
+42 places around Koronowo.
 
-Kiedy potrzebujesz **miejscowości, a nie kodów**, jest gotowa agregacja:
+When you want **places rather than codes**, there is a ready aggregation:
 
 ```ruby
 PlZipCodes.cities.first
@@ -68,10 +83,10 @@ PlZipCodes.cities.first
 #      latitude=50.6..., longitude=22.5..., postal_codes=["21-412"]>
 ```
 
-Współrzędne miejscowości to średnia z jej wierszy, bo źródło daje punkt na kod
-pocztowy, a Bydgoszcz ma ich 679.
+A place's coordinate is the mean of its rows, because the source gives one point
+per postal code and Bydgoszcz has 679 of them.
 
-### Import do bazy
+### Importing into a database
 
 ```ruby
 PlZipCodes.cities.each_slice(1000) do |batch|
@@ -85,47 +100,58 @@ PlZipCodes.cities.each_slice(1000) do |batch|
 end
 ```
 
-## Format pliku
+## File format
 
-`pl-zip-codes.tsv.gz` — TSV z nagłówkiem, obok `pl-zip-codes.manifest.json` z
-ETagiem źródła, datą budowy i liczbą wierszy. Kolumny:
+`pl-zip-codes.tsv.gz` — tab separated with a header row, next to
+`pl-zip-codes.manifest.json` holding the source ETag, build time and row count.
 
-| kolumna | przykład | uwagi |
+| column | example | note |
 |---|---|---|
 | `postal_code` | `86-010` | |
 | `city` | `Nowa Wieś Wielka` | |
-| `voivodeship` | `kujawsko-pomorskie` | nazwa z tego gema, nie ze źródła |
-| `voivodeship_teryt` | `04` | urzędowy kod TERYT |
-| `county` / `county_teryt` | `Powiat bydgoski` / `0403` | nazwa ze źródła, patrz niżej |
-| `commune` / `commune_teryt` | `Gmina Koronowo` / `040304` | nazwa ze źródła |
+| `voivodeship` | `kujawsko-pomorskie` | from this gem, not from the source |
+| `voivodeship_teryt` | `04` | official TERYT code |
+| `county` / `county_teryt` | `Powiat bydgoski` / `0403` | name as received, see below |
+| `commune` / `commune_teryt` | `Gmina Koronowo` / `040304` | name as received |
 | `latitude` / `longitude` | `53.3123` / `17.9539` | WGS84 |
-| `accuracy` | `6` | dokładność wg źródła |
+| `accuracy` | `6` | as reported by the source |
 
-Plik jest zapisywany przez plik tymczasowy i `rename`, więc przerwane pobieranie
-nigdy nie zostawia połowicznego zbioru w miejscu kompletnego.
+The file is written to a temporary path and renamed, so an interrupted download
+never replaces a complete dataset with half of one.
 
-## Czego ten gem nie udaje
+## What this gem does not pretend to do
 
-**Nazwy województw są poprawione, nazwy powiatów i gmin nie.** Źródło podaje
-wszystkie 16 województw po angielsku i niespójnie (`Lower Silesia`,
-`Warmia-Masuria`, `Łódź Voivodeship`), więc gem ma własną, zweryfikowaną tabelę
-i mapuje ją na kody TERYT. Na poziomie powiatu i gminy nazwy zostają takie, jakie
-przyszły — 36 z 374 powiatów ma artefakty w rodzaju `Leszno County`. **Pewnym
-identyfikatorem są kolumny `*_teryt`**, nie nazwy.
+**Voivodeship names are corrected; county and commune names are not.** Below the
+first level the labels are passed through as received, and 36 of 374 counties
+carry artefacts such as `Leszno County`. **The `*_teryt` columns are the
+dependable identifiers**, not the names.
 
-Naturalnym następnym krokiem jest dociągnięcie urzędowych polskich nazw z GUGiK
-SLN (`mapy.geoportal.gov.pl/wss/service/SLN/guest/sln`), który zwraca je razem z
-kodami TERYT — cały słownik to ok. 397 zapytań JSON-em, a join idzie po kodzie,
-który już mamy w każdym wierszu.
+The natural next step is pulling official Polish names from the Polish national
+mapping agency's SLN dictionary
+(`mapy.geoportal.gov.pl/wss/service/SLN/guest/sln`), which returns them together
+with TERYT codes — the whole administrative dictionary is about 397 JSON
+requests, and the join key is already in every row.
 
-Gem nie zawiera ulic ani numerów budynków i nie jest geokoderem adresów. Do
-adresu z dokładnością do numeru służy darmowe UUG GUGiK
-(`services.gugik.gov.pl/uug`).
+There are no streets or building numbers here, and this is not an address
+geocoder. For address-level lookups Poland has a free official service at
+`services.gugik.gov.pl/uug`.
 
-## Źródło i licencja
+## Development
 
-Dane pochodzą z [GeoNames](https://www.geonames.org) na licencji
-**CC BY 4.0**. Jeśli publikujesz zbudowany zbiór albo aplikację, która go
-używa, musisz podać to źródło. Manifest niesie gotową formułkę atrybucji.
+```bash
+bin/setup        # or: bundle install
+bundle exec rake test
+bundle exec rubocop
+```
 
-Sam kod jest na licencji MIT.
+The test suite never touches the network: the source archive is generated in
+memory and the HTTP transport is exercised against stubbed responses.
+
+## Source and licence
+
+The data comes from [GeoNames](https://www.geonames.org) under
+**CC BY 4.0**. If you redistribute a built dataset, or ship an application using
+one, you must credit that source. The manifest carries a ready attribution
+string.
+
+The code is MIT licensed.
