@@ -3,8 +3,9 @@
 module PlZipCodes
   class Configuration
     DEFAULT_OUTPUT_DIR = "data"
-    DATA_FILENAME = "pl-zip-codes.tsv.gz"
+    DATA_FILENAME = "pl-zip-codes.tsv"
     MANIFEST_FILENAME = "pl-zip-codes.manifest.json"
+    BUNDLED_DIR = File.expand_path("../../data", __dir__)
 
     attr_accessor :output_dir, :source_url, :user_agent, :open_timeout, :read_timeout
 
@@ -16,12 +17,27 @@ module PlZipCodes
       @read_timeout = 60
     end
 
+    # Where a refresh writes.
     def data_path
       File.join(output_dir, DATA_FILENAME)
     end
 
     def manifest_path
       File.join(output_dir, MANIFEST_FILENAME)
+    end
+
+    # Where a read looks. Your own refreshed copy wins; without one the dataset
+    # shipped inside the gem answers, so nothing has to be built before first use.
+    def readable_data_path
+      File.exist?(data_path) ? data_path : bundled_data_path
+    end
+
+    def readable_manifest_path
+      File.exist?(data_path) ? manifest_path : File.join(BUNDLED_DIR, MANIFEST_FILENAME)
+    end
+
+    def bundled_data_path
+      File.join(BUNDLED_DIR, DATA_FILENAME)
     end
   end
 end

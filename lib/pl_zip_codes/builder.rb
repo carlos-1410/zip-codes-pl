@@ -2,7 +2,6 @@
 
 require "fileutils"
 require "time"
-require "zlib"
 
 module PlZipCodes
   # Downloads the source and writes the dataset into the configured directory.
@@ -51,10 +50,10 @@ module PlZipCodes
       temporary_path = "#{config.data_path}.tmp"
       row_count = 0
 
-      Zlib::GzipWriter.open(temporary_path) do |gzip|
-        gzip.puts(Record::COLUMNS.join("\t"))
+      File.open(temporary_path, "w") do |file|
+        file.puts(Record::COLUMNS.join("\t"))
         source.each_record(download.body) do |record|
-          gzip.puts(record.to_row.join("\t"))
+          file.puts(record.to_row.join("\t"))
           row_count += 1
         end
       end

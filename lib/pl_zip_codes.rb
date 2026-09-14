@@ -31,7 +31,7 @@ module PlZipCodes
     end
 
     def dataset
-      @dataset ||= Dataset.load(config.data_path)
+      @dataset ||= Dataset.load(config.readable_data_path)
     end
 
     def update(output_dir: nil)
@@ -39,7 +39,7 @@ module PlZipCodes
       Builder.new(config: config).call.tap { reset! }
     end
 
-    def manifest = Manifest.read(config.manifest_path)
+    def manifest = Manifest.read(config.readable_manifest_path)
 
     def find_by_postal_code(code) = dataset.find_by_postal_code(code)
 

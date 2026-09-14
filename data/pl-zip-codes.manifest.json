@@ -1,0 +1,10 @@
+{
+  "source_url": "https://download.geonames.org/export/zip/PL.zip",
+  "attribution": "GeoNames (https://www.geonames.org), CC BY 4.0",
+  "etag": "\"f1225-65b68b320a969\"",
+  "last_modified": "Mon, 14 Sep 2026 03:05:00 GMT",
+  "row_count": 72899,
+  "built_at": "2026-09-14T22:10:45Z",
+  "gem_version": "0.1.0",
+  "format_version": 1
+}
