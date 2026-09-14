@@ -61,7 +61,9 @@ module PlZipCodes
 
       def entries(url, params)
         response = client.post_form(URI(url), params)
-        payload = JSON.parse(response.body)
+        # A success with no body is still a success to Net::HTTP, and JSON.parse
+        # raises TypeError rather than ParserError on nil.
+        payload = JSON.parse(response.body.to_s)
         unless payload.is_a?(Array) && payload.all? { |entry| valid_entry?(entry) }
           raise DownloadError, "nieprawidłowa odpowiedź Poczty Polskiej z #{url}"
         end
@@ -71,24 +73,29 @@ module PlZipCodes
         raise DownloadError, "nieprawidłowy JSON Poczty Polskiej z #{url}"
       end
 
+      # Strings are demanded rather than coerced, so a number where a code should
+      # be is refused here instead of reaching String methods further down and
+      # surfacing as NoMethodError instead of a controlled failure.
       def valid_entry?(entry)
-        entry.is_a?(Hash) && !entry["name"].to_s.empty? && !entry["value"].to_s.empty?
+        entry.is_a?(Hash) &&
+          entry["name"].is_a?(String) && !entry["name"].empty? &&
+          entry["value"].is_a?(String) && !entry["value"].empty?
       end
 
       def validate_code!(code, length, prefix)
-        return if code.to_s.match?(/\A\d{#{length}}\z/) && code.start_with?(prefix)
+        return if code.match?(/\A\d{#{length}}\z/) && code.start_with?(prefix)
 
         raise DownloadError, "nieprawidłowy kod TERYT Poczty Polskiej: #{code.inspect}"
       end
 
       def validate_commune_code!(code, district)
-        return if code.to_s.match?(/\A\d{6,7}\z/) && code.start_with?(district)
+        return if code.match?(/\A\d{6,7}\z/) && code.start_with?(district)
 
         raise DownloadError, "nieprawidłowy kod TERYT Poczty Polskiej: #{code.inspect}"
       end
 
       def add!(names, code, name)
-        normalized = name.to_s.strip
+        normalized = name.strip
         previous = names[code]
         if previous && previous != normalized
           raise DownloadError,
