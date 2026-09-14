@@ -11,12 +11,19 @@ module PlZipCodes
       def up_to_date? = status == :up_to_date
     end
 
+    # `administrative_names_source: false` builds with the raw upstream labels.
+    # The two sources default independently: tying the names to whether a custom
+    # row source was injected silently dropped the enrichment, and the manifest
+    # attribution with it.
     def initialize(config: PlZipCodes.config, source: nil, administrative_names_source: nil)
-      default_source = source.nil?
       @config = config
       @source = source || Sources::Geonames.new(config: config)
-      @administrative_names_source = administrative_names_source
-      @administrative_names_source ||= Sources::PocztaPolska.new(config: config) if default_source
+      @administrative_names_source =
+        case administrative_names_source
+        when nil then Sources::PocztaPolska.new(config: config)
+        when false then nil
+        else administrative_names_source
+        end
     end
 
     def call

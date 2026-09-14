@@ -9,7 +9,8 @@ class BuilderTest < Minitest::Test
 
   def test_writes_the_dataset_and_its_manifest
     in_output_dir do |config|
-      result = PlZipCodes::Builder.new(config: config, source: TestHelpers::StubSource.new(archive: @archive)).call
+      result = PlZipCodes::Builder.new(config: config, source: TestHelpers::StubSource.new(archive: @archive),
+                                       administrative_names_source: false).call
 
       assert result.built?
       assert_path_exists config.data_path
@@ -43,8 +44,8 @@ class BuilderTest < Minitest::Test
   def test_second_run_asks_the_server_with_the_stored_etag
     in_output_dir do |config|
       source = TestHelpers::StubSource.new(archive: @archive, etag: "\"v1\"")
-      PlZipCodes::Builder.new(config: config, source: source).call
-      PlZipCodes::Builder.new(config: config, source: source).call
+      PlZipCodes::Builder.new(config: config, source: source, administrative_names_source: false).call
+      PlZipCodes::Builder.new(config: config, source: source, administrative_names_source: false).call
 
       assert_equal [nil, "\"v1\""], source.requested_etags
     end
@@ -53,11 +54,11 @@ class BuilderTest < Minitest::Test
   def test_unchanged_source_leaves_the_dataset_alone
     in_output_dir do |config|
       first = TestHelpers::StubSource.new(archive: @archive, etag: "\"v1\"")
-      PlZipCodes::Builder.new(config: config, source: first).call
+      PlZipCodes::Builder.new(config: config, source: first, administrative_names_source: false).call
       written_at = File.mtime(config.data_path)
 
       second = TestHelpers::StubSource.new(archive: @archive, etag: "\"v1\"", not_modified_for: "\"v1\"")
-      result = PlZipCodes::Builder.new(config: config, source: second).call
+      result = PlZipCodes::Builder.new(config: config, source: second, administrative_names_source: false).call
 
       assert result.up_to_date?
       assert_equal written_at, File.mtime(config.data_path)
@@ -68,7 +69,7 @@ class BuilderTest < Minitest::Test
   def test_unchanged_source_does_not_fetch_administrative_names
     in_output_dir do |config|
       source = TestHelpers::StubSource.new(archive: @archive, etag: "\"v1\"", not_modified_for: "\"v1\"")
-      PlZipCodes::Builder.new(config: config, source: source).call
+      PlZipCodes::Builder.new(config: config, source: source, administrative_names_source: false).call
       names_source = Object.new
       names_source.define_singleton_method(:fetch) { raise "should not fetch names" }
 
@@ -105,7 +106,7 @@ class BuilderTest < Minitest::Test
   def test_failed_refresh_keeps_the_previous_dataset_and_manifest
     in_output_dir do |config|
       first = TestHelpers::StubSource.new(archive: @archive, etag: "\"v1\"")
-      PlZipCodes::Builder.new(config: config, source: first).call
+      PlZipCodes::Builder.new(config: config, source: first, administrative_names_source: false).call
       previous_data = File.binread(config.data_path)
       previous_manifest = File.binread(config.manifest_path)
       broken_rows = [TestHelpers::SAMPLE_ROWS.first, "PL\t86-010"]
@@ -113,7 +114,7 @@ class BuilderTest < Minitest::Test
       broken = TestHelpers::StubSource.new(archive: broken_archive, etag: "\"v2\"")
 
       assert_raises(PlZipCodes::DownloadError) do
-        PlZipCodes::Builder.new(config: config, source: broken).call
+        PlZipCodes::Builder.new(config: config, source: broken, administrative_names_source: false).call
       end
 
       assert_equal previous_data, File.binread(config.data_path)
@@ -125,7 +126,7 @@ class BuilderTest < Minitest::Test
   def test_failed_administrative_names_refresh_keeps_the_previous_files
     in_output_dir do |config|
       source = TestHelpers::StubSource.new(archive: @archive, etag: "\"v1\"")
-      PlZipCodes::Builder.new(config: config, source: source).call
+      PlZipCodes::Builder.new(config: config, source: source, administrative_names_source: false).call
       previous_data = File.binread(config.data_path)
       previous_manifest = File.binread(config.manifest_path)
       failed_names = Object.new
@@ -149,10 +150,10 @@ class BuilderTest < Minitest::Test
   def test_missing_data_file_forces_a_fresh_download
     in_output_dir do |config|
       source = TestHelpers::StubSource.new(archive: @archive, etag: "\"v1\"", not_modified_for: "\"v1\"")
-      PlZipCodes::Builder.new(config: config, source: source).call
+      PlZipCodes::Builder.new(config: config, source: source, administrative_names_source: false).call
       File.delete(config.data_path)
 
-      result = PlZipCodes::Builder.new(config: config, source: source).call
+      result = PlZipCodes::Builder.new(config: config, source: source, administrative_names_source: false).call
 
       assert result.built?
       assert_path_exists config.data_path
@@ -161,7 +162,8 @@ class BuilderTest < Minitest::Test
 
   def test_leaves_no_temporary_file_behind
     in_output_dir do |config|
-      PlZipCodes::Builder.new(config: config, source: TestHelpers::StubSource.new(archive: @archive)).call
+      PlZipCodes::Builder.new(config: config, source: TestHelpers::StubSource.new(archive: @archive),
+                              administrative_names_source: false).call
 
       assert_empty Dir.glob("#{config.data_path}.tmp")
     end
@@ -172,10 +174,29 @@ class BuilderTest < Minitest::Test
       config = PlZipCodes::Configuration.new
       config.output_dir = File.join(dir, "deeply", "nested")
 
-      PlZipCodes::Builder.new(config: config, source: TestHelpers::StubSource.new(archive: @archive)).call
+      PlZipCodes::Builder.new(config: config, source: TestHelpers::StubSource.new(archive: @archive),
+                              administrative_names_source: false).call
 
       assert_path_exists config.data_path
     end
+  end
+
+  # Tying the names source to whether a row source was injected meant any caller
+  # passing its own source silently lost the Polish names and the attribution.
+  def test_names_source_defaults_independently_of_the_row_source
+    builder = PlZipCodes::Builder.new(config: PlZipCodes::Configuration.new,
+                                      source: TestHelpers::StubSource.new(archive: @archive))
+
+    assert_instance_of PlZipCodes::Sources::PocztaPolska,
+                       builder.send(:administrative_names_source)
+  end
+
+  def test_names_can_be_switched_off_explicitly
+    builder = PlZipCodes::Builder.new(config: PlZipCodes::Configuration.new,
+                                      source: TestHelpers::StubSource.new(archive: @archive),
+                                      administrative_names_source: false)
+
+    assert_nil builder.send(:administrative_names_source)
   end
 
   private

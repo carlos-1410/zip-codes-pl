@@ -146,7 +146,7 @@ class ReaderTest < Minitest::Test
       config = PlZipCodes::Configuration.new
       config.output_dir = dir
       source = TestHelpers::StubSource.new(archive: TestHelpers.geonames_archive(rows: rows))
-      PlZipCodes::Builder.new(config: config, source: source).call
+      PlZipCodes::Builder.new(config: config, source: source, administrative_names_source: false).call
 
       yield PlZipCodes::Reader.new(config.data_path)
     end
