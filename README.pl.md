@@ -87,9 +87,9 @@ Kiedy potrzebujesz **miejscowości, a nie kodów**, jest gotowa agregacja:
 ```ruby
 PlZipCodes.cities.first
 # => #<data PlZipCodes::City
-#      name="Adamów", voivodeship="lubelskie", voivodeship_teryt="06",
-#      commune="Adamów", commune_teryt="061103",
-#      latitude=51.7429, longitude=22.263, postal_codes=["21-412"]>
+#      name="Abisynia", voivodeship="pomorskie", voivodeship_teryt="22",
+#      commune="Karsin", commune_teryt="220603",
+#      latitude=53.9244, longitude=17.9337, postal_codes=["83-440"]>
 ```
 
 Współrzędne miejscowości to średnia z jej wierszy, bo źródło daje punkt na kod
