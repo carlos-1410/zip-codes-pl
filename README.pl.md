@@ -12,8 +12,8 @@ kiedy źródło się nie zmieniło. Twoja odświeżona kopia ma pierwszeństwo p
 tą z gema.
 
 Zbiór to **72 899 wierszy**, **20 299 kodów pocztowych** i **52 325
-miejscowości** w 16 województwach, w pliku TSV o rozmiarze 6,6 MB. Wczytuje się
-w niecałe 200 ms.
+miejscowości** w 16 województwach, w pliku TSV o rozmiarze 6,6 MB. Wyszukiwanie
+skanuje plik bez budowania indeksu i bez trzymania całego zbioru w pamięci.
 
 ## Instalacja
 
@@ -58,10 +58,17 @@ PlZipCodes.find_by_postal_code("86-010")   # działa też "86010"
 
 PlZipCodes.find_by_city("zlotow")          # bez ogonków i wielkości liter
 PlZipCodes.find_by_city("Koronowo", voivodeship: "kujawsko-pomorskie")
+PlZipCodes.search_by_city("wie")           # fragment nazwy, np. "Nowa Wieś"
+PlZipCodes.search_by_city("OS")            # dokładnie "Oś"
 
 PlZipCodes.voivodeships
 # => 16 rekordów: kod TERYT, nazwa, slug bez polskich znaków
 ```
+
+Wyszukiwanie fragmentu ignoruje wielkość liter i polskie znaki. Od trzech
+znaków działa jak `%LIKE%`; dwuznakowa fraza dopasowuje tylko całą nazwę, dzięki
+czemu nadal można znaleźć najkrótszą miejscowość „Oś”. Jednoznakowe zapytania
+zwracają pusty wynik bez skanowania pliku.
 
 Jeden rekord to jeden kod pocztowy w jednej miejscowości. Miejscowość z kilkoma
 kodami ma kilka rekordów, tak samo kod dzielony przez kilka wsi — `86-010` to
@@ -71,7 +78,7 @@ Kiedy potrzebujesz **miejscowości, a nie kodów**, jest gotowa agregacja:
 
 ```ruby
 PlZipCodes.cities.first
-# => #<data PlZipCodes::Dataset::City
+# => #<data PlZipCodes::City
 #      name="Adamów", voivodeship="lubelskie", voivodeship_teryt="06",
 #      commune="Gmina Adamów", commune_teryt="060302",
 #      latitude=50.6..., longitude=22.5..., postal_codes=["21-412"]>
@@ -85,6 +92,16 @@ Miejscowość jest identyfikowana nazwą **i gminą**, nie samą nazwą. W Polsc
 wystawia punkt w polu, nawet 158 km od najdalszej z nich.
 
 ### Import do bazy
+
+Surowe rekordy można importować partiami bez wczytywania całego pliku:
+
+```ruby
+PlZipCodes.each_record.each_slice(1000) do |batch|
+  PostalCode.upsert_all(batch.map(&:to_h))
+end
+```
+
+Albo zapisać zagregowane miejscowości:
 
 ```ruby
 PlZipCodes.cities.each_slice(1000) do |batch|

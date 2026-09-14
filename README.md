@@ -11,7 +11,8 @@ server with `If-None-Match` so a repeated run downloads nothing when the source
 has not changed. Your refreshed copy takes precedence over the bundled one.
 
 The dataset holds **72,899 rows**, **20,299 postal codes** and **52,325 places**
-across 16 voivodeships, as a 6.6 MB tab separated file. It loads in under 200 ms.
+across 16 voivodeships, as a 6.6 MB tab separated file. Lookups scan the file
+without building an index or retaining the whole dataset in memory.
 
 ## Why this exists
 
@@ -70,10 +71,17 @@ PlZipCodes.find_by_postal_code("86-010")   # "86010" works too
 
 PlZipCodes.find_by_city("zlotow")          # case and diacritics insensitive
 PlZipCodes.find_by_city("Koronowo", voivodeship: "kujawsko-pomorskie")
+PlZipCodes.search_by_city("wie")           # name fragment, e.g. "Nowa Wieś"
+PlZipCodes.search_by_city("OS")            # exactly "Oś"
 
 PlZipCodes.voivodeships
 # => 16 records: TERYT code, Polish name, ASCII slug
 ```
+
+Fragment searches ignore case and Polish diacritics. Queries of three or more
+characters behave like `%LIKE%`; a two-character query only matches a complete
+name, so the shortest place, `Oś`, remains searchable. One-character queries
+return an empty result without scanning the file.
 
 One record is one postal code in one place. A town with several codes has
 several records, and so does a code shared by several villages — `86-010` covers
@@ -83,7 +91,7 @@ When you want **places rather than codes**, there is a ready aggregation:
 
 ```ruby
 PlZipCodes.cities.first
-# => #<data PlZipCodes::Dataset::City
+# => #<data PlZipCodes::City
 #      name="Adamów", voivodeship="lubelskie", voivodeship_teryt="06",
 #      commune="Gmina Adamów", commune_teryt="060302",
 #      latitude=50.6..., longitude=22.5..., postal_codes=["21-412"]>
@@ -97,6 +105,16 @@ villages called `Nowa Wieś`, 28 of them in a single voivodeship; collapsing the
 by name puts the resulting point in a field up to 158 km from the farthest one.
 
 ### Importing into a database
+
+Raw records can be imported in batches without loading the entire file:
+
+```ruby
+PlZipCodes.each_record.each_slice(1000) do |batch|
+  PostalCode.upsert_all(batch.map(&:to_h))
+end
+```
+
+Or import the aggregated places:
 
 ```ruby
 PlZipCodes.cities.each_slice(1000) do |batch|
