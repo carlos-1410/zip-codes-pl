@@ -5,13 +5,13 @@ refreshed by a single rake task.
 
 *(Dokumentacja po polsku: [README.pl.md](README.pl.md))*
 
-The gem ships no data. On first run it downloads the source, turns it into one
-compressed TSV file in a directory you choose, and records where it came from.
-Every later run asks the server with `If-None-Match` and downloads nothing when
-the source has not changed.
+**The dataset ships with the gem, so there is nothing to build before first
+use.** A rake task refreshes it into a directory of your choosing, asking the
+server with `If-None-Match` so a repeated run downloads nothing when the source
+has not changed. Your refreshed copy takes precedence over the bundled one.
 
-The current dataset is **72,899 rows**, **20,299 postal codes** and **45,511
-places** across 16 voivodeships, in a file of about 980 kB.
+The dataset holds **72,899 rows**, **20,299 postal codes** and **52,325 places**
+across 16 voivodeships, as a 6.6 MB tab separated file. It loads in under 200 ms.
 
 ## Why this exists
 
@@ -32,7 +32,10 @@ Polish register.
 gem "pl-zip-codes"
 ```
 
-## Building the dataset
+## Refreshing the dataset
+
+GeoNames republishes daily. To pick up a newer extract than the one bundled with
+your installed version:
 
 ```bash
 rake pl_zip_codes:update            # into the default directory (data/)
@@ -55,7 +58,9 @@ PlZipCodes.configure do |config|
 end
 ```
 
-or through the `PL_ZIP_CODES_DIR` environment variable.
+or through the `PL_ZIP_CODES_DIR` environment variable. Reads look there first
+and fall back to the bundled dataset, so configuring a directory that has not
+been refreshed yet changes nothing.
 
 ## Usage
 
@@ -64,7 +69,7 @@ PlZipCodes.find_by_postal_code("86-010")   # "86010" works too
 # => [#<data PlZipCodes::Record postal_code="86-010", city="Koronowo", ...>, ...]
 
 PlZipCodes.find_by_city("zlotow")          # case and diacritics insensitive
-PlZipCodes.find_by_city("Koronowo", voivodeship: "wielkopolskie")
+PlZipCodes.find_by_city("Koronowo", voivodeship: "kujawsko-pomorskie")
 
 PlZipCodes.voivodeships
 # => 16 records: TERYT code, Polish name, ASCII slug
@@ -80,11 +85,16 @@ When you want **places rather than codes**, there is a ready aggregation:
 PlZipCodes.cities.first
 # => #<data PlZipCodes::Dataset::City
 #      name="Adamów", voivodeship="lubelskie", voivodeship_teryt="06",
+#      commune="Gmina Adamów", commune_teryt="060302",
 #      latitude=50.6..., longitude=22.5..., postal_codes=["21-412"]>
 ```
 
 A place's coordinate is the mean of its rows, because the source gives one point
 per postal code and Bydgoszcz has 679 of them.
+
+Places are identified by name **and commune**, not by name alone. Poland has 119
+villages called `Nowa Wieś`, 28 of them in a single voivodeship; collapsing them
+by name puts the resulting point in a field up to 158 km from the farthest one.
 
 ### Importing into a database
 
@@ -102,8 +112,10 @@ end
 
 ## File format
 
-`pl-zip-codes.tsv.gz` — tab separated with a header row, next to
+`pl-zip-codes.tsv` — tab separated with a header row, next to
 `pl-zip-codes.manifest.json` holding the source ETag, build time and row count.
+It is left uncompressed on purpose: the file is committed, and a refresh should
+produce a reviewable diff rather than a fresh opaque blob.
 
 | column | example | note |
 |---|---|---|
@@ -114,12 +126,24 @@ end
 | `county` / `county_teryt` | `Powiat bydgoski` / `0403` | name as received, see below |
 | `commune` / `commune_teryt` | `Gmina Koronowo` / `040304` | name as received |
 | `latitude` / `longitude` | `53.3123` / `17.9539` | WGS84 |
-| `accuracy` | `6` | as reported by the source |
+| `accuracy` | `6` | as reported by the source — see below |
 
 The file is written to a temporary path and renamed, so an interrupted download
 never replaces a complete dataset with half of one.
 
 ## What this gem does not pretend to do
+
+**These are postal-code centroids, not surveyed points.** GeoNames derives many
+of them algorithmically from place names, and falls back to an average of
+neighbouring postal codes where no match is found. They are good enough to sort
+by distance or draw on a map; they are not property-grade coordinates. The
+`accuracy` column is a source field, and for Poland it is currently `6` on all
+72,899 rows, so it carries no usable signal.
+
+**This is a postal dataset, not the official place register.** It covers places
+that have a postal code in the GeoNames extract, under GeoNames' spelling. The
+official Polish register (TERYT SIMC) is larger and authoritative on names; the
+gap between the two has not been measured here.
 
 **Voivodeship names are corrected; county and commune names are not.** Below the
 first level the labels are passed through as received, and 36 of 374 counties

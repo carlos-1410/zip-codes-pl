@@ -29,7 +29,7 @@ class DatasetTest < Minitest::Test
 
   def test_narrows_a_shared_name_by_voivodeship
     with_dataset do |dataset|
-      found = dataset.find_by_city("Koronowo", voivodeship: "wielkopolskie")
+      found = dataset.find_by_city("Koronowo", voivodeship: "kujawsko-pomorskie")
 
       assert_equal ["64-111"], found.map(&:postal_code)
     end
