@@ -40,7 +40,7 @@ module ZipCodes
               sleeper.call(retry_after(response))
             end
 
-            raise DownloadError, "Poczta Polska ogranicza ruch - #{MAX_ATTEMPTS} prób dla #{uri}"
+            raise DownloadError, "Poczta Polska is rate limiting - gave up after #{MAX_ATTEMPTS} attempts for #{uri}"
           end
 
           private
@@ -67,9 +67,9 @@ module ZipCodes
           # A moved endpoint is reported rather than followed: this is a POST to a
           # form, and replaying it against an unknown location is not a safe guess.
           def failure_message(response, uri)
-            message = "Poczta Polska odpowiedziała #{response.code} dla #{uri}"
+            message = "Poczta Polska answered #{response.code} for #{uri}"
             location = response["location"] if response.is_a?(Net::HTTPRedirection)
-            location ? "#{message} (przekierowanie na #{location})" : message
+            location ? "#{message} (redirected to #{location})" : message
           end
 
           def post(uri, params, config)

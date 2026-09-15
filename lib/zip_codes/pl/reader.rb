@@ -102,11 +102,11 @@ module ZipCodes
       end
 
       def open_data
-        raise DatasetError, "brak zbioru danych: #{path} (uruchom `rake zip_codes:pl:update`)" unless File.exist?(path)
+        raise DatasetError, "dataset missing: #{path} (run `rake zip_codes:pl:update`)" unless File.exist?(path)
 
         File.open(path) do |file|
           header = file.gets&.chomp&.split("\t")
-          raise DatasetError, "nieoczekiwany nagłówek w #{path}" unless header == HEADER
+          raise DatasetError, "unexpected header in #{path}" unless header == HEADER
 
           yield file
         end
