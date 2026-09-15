@@ -2,7 +2,7 @@
 
 namespace :zip_codes do
   namespace :pl do
-    desc "Pobiera i odświeża zbiór kodów pocztowych (rake zip_codes:pl:update[katalog])"
+    desc "Download and refresh the postal code dataset (rake zip_codes:pl:update[directory])"
     task :update, [:output_dir] do |_task, args|
       require "zip_codes/pl"
 
@@ -10,41 +10,38 @@ namespace :zip_codes do
       manifest = result.manifest
 
       if result.up_to_date?
-        puts "Bez zmian w źródle - zbiór pozostaje aktualny: #{result.data_path}"
+        puts "Source unchanged - the dataset is already current: #{result.data_path}"
       else
-        puts "Zapisano #{manifest.row_count} wierszy do #{result.data_path}"
+        puts "Wrote #{manifest.row_count} rows to #{result.data_path}"
       end
-      puts "Źródło: #{manifest.attribution}" if manifest
+      puts "Source: #{manifest.attribution}" if manifest
     end
 
-    desc "Sprawdza spójność dołączonego zbioru z manifestem i modelem"
+    desc "Check the bundled dataset against its manifest and the record columns"
     task :verify, [:output_dir] do |_task, args|
-      require "set"
       require "zip_codes/pl"
 
       ZipCodes::PL.config.output_dir = args[:output_dir] if args[:output_dir]
       path = ZipCodes::PL.config.readable_data_path
       manifest = ZipCodes::PL.manifest
-      abort("Brak zbioru w #{path}") unless File.exist?(path)
-      abort("Brak manifestu obok #{path}") if manifest.nil?
+      abort("No dataset at #{path}") unless File.exist?(path)
+      abort("No manifest next to #{path}") if manifest.nil?
 
       header = File.open(path, &:gets).to_s.chomp.split("\t")
       expected = ZipCodes::PL::Record::COLUMNS.map(&:to_s)
-      abort("Nagłówek #{header.inspect} zamiast #{expected.inspect}") unless header == expected
+      abort("Header is #{header.inspect}, expected #{expected.inspect}") unless header == expected
 
       rows = ZipCodes::PL.reader.count
-      unless rows == manifest.row_count
-        abort("Manifest deklaruje #{manifest.row_count} wierszy, plik ma #{rows}")
-      end
+      abort("Manifest claims #{manifest.row_count} rows, the file holds #{rows}") unless rows == manifest.row_count
 
-      known = ZipCodes::PL::Voivodeship.all.map(&:teryt_code).to_set
-      unknown = ZipCodes::PL.reader.reject { |record| known.include?(record.voivodeship_teryt) }
-      abort("Nieznane kody województw: #{unknown.first(5).map(&:voivodeship_teryt).uniq.inspect}") if unknown.any?
+      known = ZipCodes::PL::Voivodeship.all.to_h { |voivodeship| [voivodeship.teryt_code, true] }
+      unknown = ZipCodes::PL.reader.reject { |record| known.key?(record.voivodeship_teryt) }
+      abort("Unknown voivodeship codes: #{unknown.first(5).map(&:voivodeship_teryt).uniq.inspect}") if unknown.any?
 
-      puts "Zbiór spójny: #{rows} wierszy, #{known.size} województw, zbudowany #{manifest.built_at}"
+      puts "Dataset consistent: #{rows} rows, #{known.size} voivodeships, built #{manifest.built_at}"
     end
 
-    desc "Pokazuje stan zbudowanego zbioru"
+    desc "Show the state of the built dataset"
     task :info, [:output_dir] do |_task, args|
       require "zip_codes/pl"
 
@@ -52,16 +49,16 @@ namespace :zip_codes do
       manifest = ZipCodes::PL.manifest
 
       if manifest.nil?
-        puts "Brak zbioru w #{ZipCodes::PL.config.output_dir} - uruchom rake zip_codes:pl:update"
+        puts "No dataset in #{ZipCodes::PL.config.output_dir} - run rake zip_codes:pl:update"
         next
       end
 
-      puts "Plik:       #{ZipCodes::PL.config.data_path}"
-      puts "Wierszy:    #{manifest.row_count}"
-      puts "Zbudowano:  #{manifest.built_at}"
-      puts "Źródło:     #{manifest.source_url}"
-      puts "Zmienione:  #{manifest.last_modified}"
-      puts "Atrybucja:  #{manifest.attribution}"
+      puts "File:       #{ZipCodes::PL.config.data_path}"
+      puts "Rows:       #{manifest.row_count}"
+      puts "Built:      #{manifest.built_at}"
+      puts "Source:     #{manifest.source_url}"
+      puts "Modified:   #{manifest.last_modified}"
+      puts "Attribution: #{manifest.attribution}"
     end
   end
 end
