@@ -130,7 +130,7 @@ class BuilderTest < Minitest::Test
       previous_data = File.binread(config.data_path)
       previous_manifest = File.binread(config.manifest_path)
       failed_names = Object.new
-      failed_names.define_singleton_method(:fetch) { raise ZipCodes::PL::DownloadError, "Poczta nie działa" }
+      failed_names.define_singleton_method(:fetch) { raise ZipCodes::PL::DownloadError, "Poczta Polska is unavailable" }
 
       assert_raises(ZipCodes::PL::DownloadError) do
         ZipCodes::PL::Builder.new(

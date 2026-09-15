@@ -7,11 +7,11 @@ Gem::Specification.new do |spec|
   spec.version = ZipCodes::PL::VERSION
   spec.authors = ["Łukasz Kerl"]
 
-  spec.summary = "Polskie kody pocztowe, miejscowości i województwa ze współrzędnymi"
-  spec.description = "Buduje i odświeża lokalny zbiór polskich kodów pocztowych " \
-                     "(PNA) wraz z miejscowością, województwem, kodami TERYT powiatu " \
-                     "i gminy oraz współrzędnymi. PNA i współrzędne pochodzą z GeoNames " \
-                     "(CC-BY 4.0), a nazwy administracyjne z Poczty Polskiej."
+  spec.summary = "Polish postal codes, localities, voivodeships, and coordinates"
+  spec.description = "Builds and refreshes a local dataset of Polish postal codes " \
+                     "(PNA), including locality, voivodeship, county and commune TERYT " \
+                     "codes, and coordinates. PNA and coordinates come from GeoNames " \
+                     "(CC BY 4.0), while administrative names come from Poczta Polska."
   spec.homepage = "https://github.com/carlos-1410/zip-codes-pl"
   spec.license = "MIT"
   spec.required_ruby_version = ">= 3.2.0"
