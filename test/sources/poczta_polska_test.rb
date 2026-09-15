@@ -44,7 +44,7 @@ class PocztaPolskaTest < Minitest::Test
 
     error = assert_raises(ZipCodes::PL::DownloadError) { source.fetch }
 
-    assert_match(/ogranicza ruch/, error.message)
+    assert_match(/rate limiting/, error.message)
     assert_equal ZipCodes::PL::Sources::PocztaPolska::Client::MAX_ATTEMPTS, waits.count(1.0)
   end
 

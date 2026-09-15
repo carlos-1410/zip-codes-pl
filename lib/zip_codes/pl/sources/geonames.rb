@@ -30,9 +30,7 @@ module ZipCodes
           response = get(URI.parse(config.source_url), etag: etag)
           return nil if response.is_a?(Net::HTTPNotModified)
 
-          unless response.is_a?(Net::HTTPSuccess)
-            raise DownloadError, "#{config.source_url} odpowiedziało #{response.code}"
-          end
+          raise DownloadError, "#{config.source_url} answered #{response.code}" unless response.is_a?(Net::HTTPSuccess)
 
           Download.new(
             body: response.body,
@@ -46,7 +44,7 @@ module ZipCodes
 
           Zip::File.open_buffer(StringIO.new(archive)) do |zip|
             entry = zip.find_entry(ENTRY)
-            raise DownloadError, "w archiwum nie ma #{ENTRY}" if entry.nil?
+            raise DownloadError, "the archive has no #{ENTRY}" if entry.nil?
 
             entry.get_input_stream do |stream|
               # The entry stream yields ASCII-8BIT, and Polish names have to survive it.
@@ -66,7 +64,7 @@ module ZipCodes
           # Following it as a redirect is how the second run used to die.
           return response if response.is_a?(Net::HTTPNotModified)
           return response unless response.is_a?(Net::HTTPRedirection)
-          raise DownloadError, "za dużo przekierowań z #{config.source_url}" if redirects >= MAX_REDIRECTS
+          raise DownloadError, "too many redirects from #{config.source_url}" if redirects >= MAX_REDIRECTS
 
           get(URI.parse(response["location"]), etag: etag, redirects: redirects + 1)
         end
@@ -93,13 +91,13 @@ module ZipCodes
           fields = line.chomp.split("\t", -1)
           unless fields.length == EXPECTED_FIELDS
             raise DownloadError,
-                  "nieprawidłowy rekord GeoNames: oczekiwano #{EXPECTED_FIELDS} pól, otrzymano #{fields.length}"
+                  "malformed GeoNames row: expected #{EXPECTED_FIELDS} fields, got #{fields.length}"
           end
 
           voivodeship = Voivodeship.find_by_geonames_code(fields[4])
           # An unknown admin1 code means the canonical table above is stale, and a
           # silently dropped row would quietly corrupt the output.
-          raise DownloadError, "nieznany kod województwa GeoNames: #{fields[4].inspect}" if voivodeship.nil?
+          raise DownloadError, "unknown GeoNames voivodeship code: #{fields[4].inspect}" if voivodeship.nil?
 
           yield build_record(fields, voivodeship)
         end

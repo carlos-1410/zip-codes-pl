@@ -10,7 +10,7 @@ module ZipCodes
       class PocztaPolska
         DISTRICTS_URL = "https://www.poczta-polska.pl/wp-content/themes/pp/inc/pna-form/pna-search-district.php"
         COMMUNES_URL = "https://www.poczta-polska.pl/wp-content/themes/pp/inc/pna-form/pna-search-commune.php"
-        ATTRIBUTION = "nazwy powiatów i gmin: Poczta Polska (https://www.poczta-polska.pl)"
+        ATTRIBUTION = "county and commune names: Poczta Polska (https://www.poczta-polska.pl)"
         DEFAULT_REQUEST_INTERVAL = 0.25
         LEGACY_COMMUNES = { "320304" => "Ostrowice" }.freeze
         Names = Data.define(:counties, :communes)
@@ -66,12 +66,12 @@ module ZipCodes
           # raises TypeError rather than ParserError on nil.
           payload = JSON.parse(response.body.to_s)
           unless payload.is_a?(Array) && payload.all? { |entry| valid_entry?(entry) }
-            raise DownloadError, "nieprawidłowa odpowiedź Poczty Polskiej z #{url}"
+            raise DownloadError, "malformed Poczta Polska response from #{url}"
           end
 
           payload
         rescue JSON::ParserError
-          raise DownloadError, "nieprawidłowy JSON Poczty Polskiej z #{url}"
+          raise DownloadError, "malformed Poczta Polska JSON from #{url}"
         end
 
         # Strings are demanded rather than coerced, so a number where a code should
@@ -86,13 +86,13 @@ module ZipCodes
         def validate_code!(code, length, prefix)
           return if code.match?(/\A\d{#{length}}\z/) && code.start_with?(prefix)
 
-          raise DownloadError, "nieprawidłowy kod TERYT Poczty Polskiej: #{code.inspect}"
+          raise DownloadError, "malformed Poczta Polska TERYT code: #{code.inspect}"
         end
 
         def validate_commune_code!(code, district)
           return if code.match?(/\A\d{6,7}\z/) && code.start_with?(district)
 
-          raise DownloadError, "nieprawidłowy kod TERYT Poczty Polskiej: #{code.inspect}"
+          raise DownloadError, "malformed Poczta Polska TERYT code: #{code.inspect}"
         end
 
         def add!(names, code, name)
@@ -100,7 +100,7 @@ module ZipCodes
           previous = names[code]
           if previous && previous != normalized
             raise DownloadError,
-                  "sprzeczne nazwy Poczty Polskiej dla TERYT #{code}: #{previous.inspect} i #{normalized.inspect}"
+                  "conflicting Poczta Polska names for TERYT #{code}: #{previous.inspect} and #{normalized.inspect}"
           end
 
           names[code] = normalized

@@ -78,8 +78,8 @@ module ZipCodes
       end
 
       def apply_administrative_names(record, names)
-        county = name_for!(names.counties, record.county_teryt, "powiatu")
-        commune = name_for!(names.communes, record.commune_teryt, "gminy")
+        county = name_for!(names.counties, record.county_teryt, "county")
+        commune = name_for!(names.communes, record.commune_teryt, "commune")
         county = "powiat #{county}" if county && record.county_teryt[2, 2].to_i < 60
 
         Record.new(**record.to_h, county: county, commune: commune)
@@ -89,7 +89,7 @@ module ZipCodes
         return nil if code.nil?
 
         names.fetch(code) do
-          raise DownloadError, "brak nazwy #{level} dla kodu TERYT #{code} w odpowiedzi Poczty Polskiej"
+          raise DownloadError, "no #{level} name for TERYT code #{code} in the Poczta Polska response"
         end
       end
 
